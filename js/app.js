@@ -347,11 +347,11 @@
       h('h1', null, `Урок ${lesson.n}. `, h('span', { lang: 'es' }, lesson.title)),
       h('p', { class: 'sub' }, lesson.ru),
       h('div', { class: 'player' }, h('div', { class: 'row' }, playBtn), status),
-      Speech.supported && !Speech.voice() ? h('div', null, voiceInfo()) : null,
+      ...(Speech.supported && !Speech.voice() ? [h('div', null, voiceInfo())] : []),
       dialog,
-      lesson.notes && lesson.notes.length
+      ...(lesson.notes && lesson.notes.length
         ? [h('h2', null, 'Пояснения'), h('ul', { class: 'notes' }, lesson.notes.map(n => h('li', null, n)))]
-        : null,
+        : []),
       h('h2', null, 'Готово?'),
       completion,
       h('nav', { class: 'lesson-nav' },

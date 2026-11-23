@@ -70,6 +70,15 @@ test('урок: испанский текст и транскрипция с у�
   assert.ok(app.$$('.notes li').length > 0);
 });
 
+test('на экранах нет «null», «undefined» и «[object …]»', async t => {
+  for (const hash of ['#/', '#/lesson/1', '#/review']) {
+    const app = setup(t, { hash, progress: lessonOneProgress() });
+    assert.doesNotMatch(app.text('main'), /\bnull\b|\bundefined\b|\[object /, hash);
+  }
+  const noVoice = setup(t, { hash: '#/lesson/1', voices: [] });
+  assert.doesNotMatch(noVoice.text('main'), /\bnull\b|\bundefined\b|\[object /);
+});
+
 test('урок: ▶ и 🐢 озвучивают фразу обычной и медленной скоростью', t => {
   const app = setup(t, { hash: '#/lesson/1' });
   const first = app.$('.phrase');
