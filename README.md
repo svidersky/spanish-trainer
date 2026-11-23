@@ -1,39 +1,39 @@
-# Испанский тренажёр
+# Spanish Trainer
 
-Личный тренажёр испанского (вариант Испании, es-ES) для русскоговорящего ученика. Работает как обычные HTML-файлы: без сервера, без установки.
+A personal Spanish trainer (Spain variant, es-ES) for a Russian-speaking learner. It is plain HTML files: no server, nothing to install.
 
-- **Уроки в стиле Assimil.** Короткие диалоги, где испанский и русский стоят рядом, у каждой фразы есть транскрипция русскими буквами. Каждую фразу озвучивает голос браузера, а в паузе ты повторяешь её вслух.
-- **Флеш-карточки с интервальным повторением (SM-2, как в Anki).** Пройденный урок добавляет свои фразы в колоду. Из каждой фразы получаются две карточки: узнавание (ES → RU, отвечаешь в уме) и воспроизведение (RU → ES, печатаешь ответ, тренажёр подсвечивает отличия).
+- **Assimil-style lessons.** Short dialogues with the Spanish and the Russian side by side, and a Russian-letter transcription for every phrase. The browser's voice speaks each phrase, then pauses so you can repeat it aloud.
+- **Flashcards with spaced repetition (SM-2, as in Anki).** A completed lesson adds its phrases to the deck. Every phrase becomes two cards: Recognition (ES → RU, answer in your head) and Production (RU → ES, type the answer; the trainer highlights the differences).
 
-Термины проекта описаны в [CONTEXT.md](CONTEXT.md).
+The project's terms are defined in [CONTEXT.md](CONTEXT.md). The learner-facing interface and lesson content are in Russian; everything else in the repository is in English.
 
-## Как запустить
+## Running it
 
-Открой `index.html` двойным кликом. Лучше всего в **Microsoft Edge**: в нём есть качественные онлайн-голоса для испанского.
+Open `index.html` by double-clicking it. **Microsoft Edge** works best: it ships good online Spanish voices.
 
-Если тренажёр пишет, что испанский голос не найден, добавь его в Windows: *Параметры → Время и язык → Речь → Добавить голоса → Español (España)*.
+If the trainer says no Spanish voice was found, add one in Windows: *Settings → Time & language → Speech → Add voices → Español (España)*.
 
-## Прогресс
+## Progress
 
-Прогресс хранится в браузере (localStorage) и пропадёт, если очистить данные браузера. Поэтому время от времени нажимай **«Сохранить прогресс в файл»**. Файл можно положить в облако и потом загрузить обратно кнопкой **«Загрузить из файла»**. Тренажёр сам напомнит, если с последнего сохранения прошло больше недели.
+Progress lives in the browser (localStorage) and is lost if you clear the browser's data. Click **«Сохранить прогресс в файл»** (save progress to a file) from time to time. You can keep that file in the cloud and load it back with **«Загрузить из файла»** (load from a file). The trainer reminds you if more than a week has passed since the last save.
 
-## Как добавить свой урок
+## Adding a lesson
 
-Уроки лежат в [data/lessons.js](data/lessons.js). Скопируй урок, поменяй номер `n`, а у каждой фразы задай уникальный `id`. Не меняй `id` у фраз уже пройденных уроков: на нём держится прогресс.
+Lessons live in [data/lessons.js](data/lessons.js). Copy a lesson, change its number `n`, and give every phrase a unique `id`. Never change the `id` of a phrase in a lesson that has already been completed: progress is keyed on it.
 
-В транскрипции ставь апостроф сразу после ударной гласной: `"о'ла"` превратится в «о́ла».
+In the transcription, put an apostrophe right after the stressed vowel: `"о'ла"` is rendered as «о́ла».
 
-## Тесты
+## Tests
 
-Нужен Node.js 20 или новее. Тесты запускаются так:
+Requires Node.js 20 or newer:
 
 ```
 npm install
 npm test
 ```
 
-- [tests/core.test.js](tests/core.test.js) проверяет планировщик SM-2 и сравнение ответов.
-- [tests/lessons.test.js](tests/lessons.test.js) проверяет данные уроков: уникальные `id`, ударения в транскрипции, пары знаков ¿? и ¡!.
-- [tests/ui.test.js](tests/ui.test.js) проверяет экраны в jsdom: урок, отметку «пройден», сессию с обоими направлениями карточек, таймер, экспорт и импорт, выбор голоса.
+- [tests/core.test.js](tests/core.test.js) covers the SM-2 scheduler and answer comparison.
+- [tests/lessons.test.js](tests/lessons.test.js) checks lesson data: unique ids, stress marks in transcriptions, paired ¿? and ¡! marks.
+- [tests/ui.test.js](tests/ui.test.js) runs the screens in jsdom: lessons, marking a lesson completed, a session with both card directions, the timer, export and import, and voice selection.
 
-Тесты запускаются в GitHub Actions на каждый PR и на каждый push в `main` ([.github/workflows/test.yml](.github/workflows/test.yml)).
+GitHub Actions runs the tests on every pull request and on every push to `main` ([.github/workflows/test.yml](.github/workflows/test.yml)).

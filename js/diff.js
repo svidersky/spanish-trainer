@@ -1,9 +1,10 @@
-// Сравнение напечатанного Ответа с правильной Фразой: подсветка, но не оценка.
+// Compares a typed Answer with the correct Phrase: highlights differences, never grades.
 (function (root) {
   'use strict';
 
-  // Посимвольный diff по наибольшей общей подпоследовательности.
-  // same — совпало, extra — лишнее у ученика, missing — не хватает у ученика.
+  // Character diff based on the longest common subsequence.
+  // same — matches, extra — the learner typed it but it is not in the Phrase,
+  // missing — in the Phrase but the learner did not type it.
   function diffChars(typed, correct) {
     const a = Array.from(typed);
     const b = Array.from(correct);
@@ -26,14 +27,14 @@
     return ops;
   }
 
-  // Склеивает соседние символы одного типа в один кусок.
+  // Merges adjacent characters of the same type into one chunk.
   function push(ops, type, ch) {
     const last = ops[ops.length - 1];
     if (last && last.type === type) last.text += ch;
     else ops.push({ type, text: ch });
   }
 
-  // Без ударений, ñ→n, регистра, знаков препинания и лишних пробелов.
+  // Ignores accents (ñ→n), case, punctuation and extra whitespace.
   function loose(s) {
     return s
       .normalize('NFD')
@@ -44,7 +45,7 @@
       .trim();
   }
 
-  // 'exact' | 'almost' (только ударения/ñ/регистр/знаки) | 'different' | 'empty'
+  // 'exact' | 'almost' (only accents/ñ/case/punctuation differ) | 'different' | 'empty'
   function compare(typed, correct) {
     const t = typed.trim().replace(/\s+/g, ' ');
     if (!t) return 'empty';

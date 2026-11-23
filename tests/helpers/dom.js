@@ -1,5 +1,5 @@
-// Запуск тренажёра в jsdom: те же файлы, что подключает index.html, плюс заглушки
-// для того, чего в jsdom нет (синтез речи, alert/confirm, прокрутка, blob-ссылки).
+// Boots the trainer in jsdom: the same scripts index.html loads, plus stubs for what
+// jsdom lacks (speech synthesis, alert/confirm, scrolling, blob URLs).
 const fs = require('node:fs');
 const path = require('node:path');
 const { JSDOM, VirtualConsole } = require('jsdom');
@@ -22,7 +22,7 @@ function boot({
 } = {}) {
   const errors = [];
   const virtualConsole = new VirtualConsole();
-  // Переход по blob-ссылке при экспорте jsdom не умеет — это не ошибка приложения.
+  // jsdom cannot navigate to the blob URL used by export; that is not an app error.
   virtualConsole.on('jsdomError', e => { if (!/navigation/i.test(e.message)) errors.push(e.message); });
   virtualConsole.on('error', (...args) => errors.push(args.join(' ')));
 
@@ -35,7 +35,7 @@ function boot({
   });
   const w = dom.window;
 
-  // Управляемые часы: приложение берёт время только через Date.now().
+  // Controllable clock: the app reads time only through Date.now().
   let now = START;
   w.Date.now = () => now;
 
@@ -81,7 +81,7 @@ function boot({
     text: s => ($(s) ? $(s).textContent : ''),
     byText(selector, text) {
       const el = $$(selector).find(e => e.textContent.includes(text));
-      if (!el) throw new Error(`Не найден ${selector} с текстом «${text}»`);
+      if (!el) throw new Error(`No ${selector} with text "${text}"`);
       return el;
     },
     now: () => now,
@@ -100,16 +100,16 @@ function boot({
       for (;;) {
         const v = fn();
         if (v) return v;
-        if (Date.now() > until) throw new Error('Не дождались условия: ' + fn.toString());
+        if (Date.now() > until) throw new Error('Timed out waiting for: ' + fn.toString());
         await sleep(10);
       }
     },
-    // Оценка Карточки. Пауза 400 мс — защита приложения от «проскочившего» нажатия.
+    // Grade the current Card. The 400 ms step gets past the app's double-press guard.
     grade(label) {
       now += 400;
       app.byText('.grades button', label).click();
     },
-    // Ответить на текущую Карточку любого направления (до показа оценок).
+    // Answer the current Card in either direction (up to showing the grade buttons).
     answer(typed = '') {
       const input = $('.card input.answer');
       if (input) {
@@ -129,7 +129,7 @@ function boot({
   return app;
 }
 
-// Прогресс, в котором Урок 1 пройден и все его Карточки ждут повторения.
+// Progress in which Lesson 1 is Completed and all its Cards are due.
 function lessonOneProgress(overrides = {}) {
   const ctx = { window: {} };
   require('node:vm').runInNewContext(read('data/lessons.js'), ctx);

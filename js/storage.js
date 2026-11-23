@@ -1,4 +1,4 @@
-// Прогресс ученика: хранится в браузере (localStorage), страхуется экспортом в файл.
+// Learner progress: kept in the browser (localStorage), backed up by exporting to a file.
 (function (root) {
   'use strict';
 
@@ -44,7 +44,7 @@
         root.localStorage.setItem(KEY, JSON.stringify(state));
         return true;
       } catch (err) {
-        console.warn('Не удалось сохранить прогресс', err);
+        console.warn('Could not save progress', err);
         return false;
       }
     },

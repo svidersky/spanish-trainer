@@ -1,39 +1,41 @@
-# Тренажёр испанского
+# Spanish Trainer
 
-Личный тренажёр испанского (вариант Испании, es-ES) для одного ученика, родной язык — русский. Два метода: флеш-карточки с интервальным повторением и уроки в стиле Assimil.
+A personal Spanish trainer (Spain variant, es-ES) for a single learner whose native language is Russian. It combines two methods: flashcards with spaced repetition and Assimil-style lessons.
 
-## Глоссарий
+The learner-facing interface is in Russian. The Russian label the learner sees is given in parentheses after each term.
 
-**Урок** (Lesson)
-Короткий диалог в стиле Assimil из 5–10 Фраз: испанский текст и русский перевод стоят рядом, к ним добавлено несколько пояснений. Ученик слушает каждую Фразу и повторяет её вслух в паузе после озвучки. Активной «второй волны» Assimil нет, её роль выполняют Карточки Воспроизведения.
+## Glossary
 
-**Пройден** (Completed)
-Ученик сам отмечает Урок пройденным. В этот момент все Фразы Урока попадают в Колоду. Фразы непройденных Уроков в Колоду не попадают.
+**Lesson** («Урок»)
+A short Assimil-style dialogue of 5–10 Phrases, with the Spanish text and the Russian translation side by side and a few notes. The learner listens to each Phrase and repeats it aloud during the pause after it is spoken. There is no active "second wave" as in Assimil; Production Cards play that role.
 
-**Колода** (Deck)
-Все Карточки Фраз из пройденных Уроков. Колода одна, общая для всех Уроков.
+**Completed** («Пройден»)
+The learner marks a Lesson as Completed themselves. At that moment all of the Lesson's Phrases are added to the Deck. Phrases from Lessons that are not Completed never enter the Deck.
 
-**Сессия** (Session)
-Одно занятие с Колодой, ограниченное по времени (по умолчанию 15 минут). Первыми идут Карточки, срок которых прошёл давнее всего. Когда время выходит, текущая Карточка доигрывается до Оценки, после чего Сессия заканчивается. Карточки, до которых не дошли, остаются в очереди.
+**Deck** («Колода»)
+All Cards of all Phrases from Completed Lessons. There is a single Deck shared by all Lessons.
 
-**Фраза** (Phrase)
-Единица учебного материала: испанский текст, Транскрипция, русский перевод и озвучка на es-ES. Из неё строятся Карточки.
+**Session** («Сессия»)
+One time-boxed practice run over the Deck (15 minutes by default). The Cards that have been due the longest come first. When time runs out, the current Card is played through to its Grade and the Session ends. Cards not reached stay in the queue.
 
-**Транскрипция** (Transcription)
-Произношение испанской Фразы, записанное русскими буквами, с ударением. Показывается в скобках сразу после испанского текста: «¿Dónde está el baño? (дóндэ эстá эль бáньо?)». В Уроке Транскрипция видна всегда. В Карточке любого направления она появляется только после Ответа, вместе с правильным вариантом.
+**Phrase** («Фраза»)
+A unit of learning material: the Spanish text, its Transcription, the Russian translation, and es-ES audio. Cards are built from Phrases.
 
-**Карточка** (Card)
-Одно направление проверки одной Фразы со своим собственным прогрессом. У каждой Фразы две Карточки:
-- **Узнавание** (ES → RU): видишь или слышишь испанский, вспоминаешь смысл.
-- **Воспроизведение** (RU → ES): видишь русский, вспоминаешь испанский.
+**Transcription** («Транскрипция»)
+The pronunciation of a Spanish Phrase written in Russian (Cyrillic) letters, with the stressed vowel marked. It is shown in parentheses right after the Spanish text: «¿Dónde está el baño? (до́ндэ эста́ эль ба́ньо?)». In a Lesson the Transcription is always visible. On a Card of either direction it appears only after the Answer, together with the correct text.
 
-Прогресс одной Карточки не влияет на прогресс другой Карточки той же Фразы.
+**Card** («Карточка»)
+One direction of testing one Phrase, with its own progress. Every Phrase has two Cards:
+- **Recognition** («Узнавание», ES → RU): you see or hear the Spanish and recall the meaning.
+- **Production** («Воспроизведение», RU → ES): you see the Russian and recall the Spanish.
 
-**Ответ** (Answer)
-То, что ученик делает до того, как увидит правильный вариант. Для Узнавания это ответ в уме или вслух. Для Воспроизведения ученик печатает испанский текст, и тренажёр подсвечивает отличия от правильного варианта, но сам ничего не оценивает.
+The progress of one Card does not affect the other Card of the same Phrase.
 
-**Оценка** (Grade)
-Самооценка ученика после Ответа: *забыл / трудно / нормально / легко*. Всегда ставится учеником, а не тренажёром. От неё зависит, когда Карточку покажут снова (по методу SM-2, как в Anki).
+**Answer** («Ответ»)
+What the learner does before seeing the correct text. For Recognition, the learner answers silently or aloud. For Production, the learner types the Spanish text; the trainer highlights the differences from the correct text but does not judge it.
 
-**Выучена** (Learned)
-Статус Карточки, у которой интервал до следующего показа 21 день или больше. Выученная Карточка всё равно продолжает повторяться. Если после Оценки «забыл» интервал станет меньше 21 дня, статус снимается. Отдельного статуса «проблемная» нет: трудные Карточки просто чаще показываются по SM-2.
+**Grade** («Оценка»)
+The learner's self-assessment after the Answer: *again / hard / good / easy* («забыл / трудно / нормально / легко»). It is always given by the learner, never by the trainer. It decides when the Card is shown next (SM-2 algorithm, as in Anki).
+
+**Learned** («Выучена»)
+The status of a Card whose interval until the next review is 21 days or more. A Learned Card is still reviewed. If a Grade of *again* drops the interval below 21 days, the status is removed. There is no separate "problem card" status: difficult Cards are simply shown more often by SM-2.

@@ -1,4 +1,5 @@
-// Экраны тренажёра в jsdom: главная, Урок, Сессия, прогресс, озвучка.
+// Trainer screens in jsdom: home, Lesson, Session, progress, speech.
+// Regexes match learner-facing UI text, which is Russian.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { boot, lessonOneProgress, START, DAY } = require('./helpers/dom');
@@ -17,9 +18,9 @@ async function reviewing(t, opts = {}) {
 
 const clone = x => JSON.parse(JSON.stringify(x));
 
-// ---------- главная ----------
+// ---------- home ----------
 
-test('главная: 10 уроков, пустая колода, без кнопки сессии', t => {
+test('home: 10 lessons, empty deck, no session button', t => {
   const app = setup(t);
   assert.equal(app.$$('.lessons li').length, 10);
   assert.match(app.text('.panel'), /Колода пока пуста/);
@@ -27,7 +28,7 @@ test('главная: 10 уроков, пустая колода, без кно�
   assert.deepEqual(app.errors, []);
 });
 
-test('главная: статистика и кнопка сессии при пройденном уроке', t => {
+test('home: stats and session button once a lesson is completed', t => {
   const app = setup(t, { progress: lessonOneProgress() });
   const [due, learned, total] = app.$$('.stat b').map(b => b.textContent);
   assert.deepEqual([due, learned, total], ['16', '0', '16']);
@@ -35,7 +36,7 @@ test('главная: статистика и кнопка сессии при �
   assert.ok(app.$('.lessons li.done'));
 });
 
-test('главная: карточки удалённых фраз не учитываются и ничего не ломают', t => {
+test('home: cards of removed phrases are ignored and break nothing', t => {
   const app = setup(t, {
     progress: { completedLessons: [1], cards: { 'zz-99|recog': { ef: 2.5, reps: 0, interval: 0, lapses: 0, due: START } } },
   });
@@ -43,7 +44,7 @@ test('главная: карточки удалённых фраз не учит
   assert.deepEqual(app.errors, []);
 });
 
-test('главная: длительность сессии ограничена 1–120 минутами', t => {
+test('home: session length is clamped to 1–120 minutes', t => {
   const app = setup(t);
   const set = value => {
     const input = app.$('input[type=number]');
@@ -57,20 +58,20 @@ test('главная: длительность сессии ограничена
   assert.equal(set('abc'), 15);
 });
 
-// ---------- Урок ----------
+// ---------- Lesson ----------
 
-test('урок: испанский текст и транскрипция с ударением в скобках', t => {
+test('lesson: Spanish text and stressed Transcription in parentheses', t => {
   const app = setup(t, { hash: '#/lesson/1' });
   const first = app.$('.phrase');
   assert.equal(first.querySelector('.es').textContent, '¡Hola! ¿Qué tal?');
   assert.equal(first.querySelector('.tr').textContent, '(о́ла! кэ таль?)');
   assert.equal(first.querySelector('.ru').textContent, 'Привет! Как дела?');
-  assert.ok(!app.text('.dialog').includes("'"), 'апострофы ударений должны превратиться в знак ударения');
+  assert.ok(!app.text('.dialog').includes("'"), 'stress apostrophes must become stress marks');
   assert.equal(app.$$('.phrase').length, 8);
   assert.ok(app.$$('.notes li').length > 0);
 });
 
-test('на экранах нет «null», «undefined» и «[object …]»', async t => {
+test('no screen renders "null", "undefined" or "[object …]"', async t => {
   for (const hash of ['#/', '#/lesson/1', '#/review']) {
     const app = setup(t, { hash, progress: lessonOneProgress() });
     assert.doesNotMatch(app.text('main'), /\bnull\b|\bundefined\b|\[object /, hash);
@@ -79,7 +80,7 @@ test('на экранах нет «null», «undefined» и «[object …]»', a
   assert.doesNotMatch(noVoice.text('main'), /\bnull\b|\bundefined\b|\[object /);
 });
 
-test('урок: ▶ и 🐢 озвучивают фразу обычной и медленной скоростью', t => {
+test('lesson: ▶ and 🐢 speak the phrase at normal and slow speed', t => {
   const app = setup(t, { hash: '#/lesson/1' });
   const first = app.$('.phrase');
   first.querySelector('button[title="Слушать"]').click();
@@ -90,19 +91,19 @@ test('урок: ▶ и 🐢 озвучивают фразу обычной и м
   assert.equal(app.spoken.at(-1).voice.lang, 'es-ES');
 });
 
-test('урок: «Слушать и повторять» проигрывает фразы по порядку и останавливается', async t => {
+test('lesson: "listen and repeat" plays phrases in order and can be stopped', async t => {
   const app = setup(t, { hash: '#/lesson/1' });
   const play = app.byText('.player button', 'Слушать и повторять');
   play.click();
   assert.equal(app.spoken.at(-1).text, '¡Hola! ¿Qué tal?');
   assert.ok(app.$('.phrase.playing'));
   await app.waitFor(() => /Повторите вслух/.test(app.text('.status')));
-  play.click(); // теперь это «Остановить»
+  play.click(); // now it is the stop button
   assert.equal(app.$('.phrase.playing'), null);
   assert.match(play.textContent, /Слушать и повторять/);
 });
 
-test('урок: «Отметить пройденным» кладёт по две карточки на каждую фразу', t => {
+test('lesson: marking it completed adds two cards per phrase', t => {
   const app = setup(t, { hash: '#/lesson/1' });
   app.byText('button', 'Отметить урок пройденным').click();
   const p = app.progress();
@@ -115,7 +116,7 @@ test('урок: «Отметить пройденным» кладёт по дв
   assert.match(app.text('.done-msg'), /Урок пройден/);
 });
 
-test('урок: повторная отметка не сбрасывает прогресс карточек', async t => {
+test('lesson: completing again keeps existing card progress', async t => {
   const progress = lessonOneProgress();
   progress.cards['l01-01|recog'] = { ef: 2.6, reps: 3, interval: 15, lapses: 0, due: START + 15 * DAY, last: START };
   progress.completedLessons = [];
@@ -124,42 +125,42 @@ test('урок: повторная отметка не сбрасывает пр
   assert.equal(app.progress().cards['l01-01|recog'].interval, 15);
 });
 
-test('урок: несуществующий номер ведёт на главную', async t => {
+test('lesson: an unknown lesson number redirects home', async t => {
   const app = setup(t, { hash: '#/lesson/99' });
   await app.waitFor(() => app.$('.lessons'));
 });
 
-// ---------- Сессия ----------
+// ---------- Session ----------
 
-test('сессия: нечего повторять', t => {
+test('session: nothing due', t => {
   const progress = lessonOneProgress();
   for (const c of Object.values(progress.cards)) c.due = START + 2 * DAY;
   const app = setup(t, { hash: '#/review', progress });
   assert.match(app.text('main'), /Сейчас повторять нечего/);
 });
 
-test('сессия: сначала узнавание, ответ и транскрипция скрыты до показа', async t => {
+test('session: Recognition first; answer and Transcription hidden until revealed', async t => {
   const app = await reviewing(t);
   assert.match(app.text('.card .dir'), /Узнавание/);
   assert.equal(app.text('.card .prompt'), '¡Hola! ¿Qué tal?');
   assert.equal(app.$('.card .tr'), null);
   assert.equal(app.$('.card .grades'), null);
-  assert.equal(app.spoken.at(-1).text, '¡Hola! ¿Qué tal?', 'фраза озвучивается при показе');
+  assert.equal(app.spoken.at(-1).text, '¡Hola! ¿Qué tal?', 'the phrase is spoken when shown');
   app.key(' ');
   assert.ok(app.$('.card .tr'));
   assert.ok(app.$('.card .grades'));
   assert.match(app.text('.card .answer-block'), /Привет! Как дела\?/);
 });
 
-test('сессия: оценка сразу после показа ответа игнорируется (защита от двойного нажатия)', async t => {
+test('session: a grade right after revealing is ignored (double-press guard)', async t => {
   const app = await reviewing(t);
   app.key(' ');
-  app.key('3'); // без паузы
-  assert.ok(app.$('.card .grades'), 'карточка должна остаться на экране');
+  app.key('3'); // no pause
+  assert.ok(app.$('.card .grades'), 'the card must stay on screen');
   assert.equal(app.progress().cards['l01-01|recog'].reps, 0);
 });
 
-test('сессия: «Нормально» сохраняет состояние SM-2', async t => {
+test('session: "good" saves the SM-2 state', async t => {
   const app = await reviewing(t);
   app.key(' ');
   app.grade('Нормально');
@@ -170,17 +171,17 @@ test('сессия: «Нормально» сохраняет состояние
   assert.match(app.text('.session-bar'), /повторено 1/);
 });
 
-test('сессия: оценки ставятся клавишами 1–4', async t => {
+test('session: grades can be given with keys 1–4', async t => {
   const app = await reviewing(t);
   app.key(' ');
   app.advance(400);
   app.key('4');
   const c = app.progress().cards['l01-01|recog'];
   assert.equal(c.reps, 1);
-  assert.ok(c.ef > 2.5, '«Легко» повышает лёгкость');
+  assert.ok(c.ef > 2.5, '"easy" raises ease');
 });
 
-test('сессия: «Забыл» возвращает карточку в конец той же сессии', async t => {
+test('session: "again" sends the card to the end of the same session', async t => {
   const app = await reviewing(t);
   app.key(' ');
   app.grade('Забыл');
@@ -193,7 +194,7 @@ test('сессия: «Забыл» возвращает карточку в ко
   assert.equal(app.text('.card .prompt'), '¡Hola! ¿Qué tal?');
 });
 
-test('сессия: воспроизведение — подсветка отличий, транскрипция только после проверки', async t => {
+test('session: Production highlights differences; Transcription only after checking', async t => {
   const app = await reviewing(t);
   for (let i = 0; i < 8; i++) {
     app.key(' ');
@@ -202,17 +203,17 @@ test('сессия: воспроизведение — подсветка отл
   assert.match(app.text('.card .dir'), /Воспроизведение/);
   assert.equal(app.text('.card .prompt'), 'Привет! Как дела?');
   assert.equal(app.$('.card .tr'), null);
-  assert.equal(app.$('.card .es'), null, 'испанский ответ не виден до проверки');
+  assert.equal(app.$('.card .es'), null, 'the Spanish answer is hidden until checked');
 
   app.answer('hola, que tal');
   assert.ok(app.$('.verdict.almost'));
   assert.ok(app.$('.diff .missing'));
   assert.ok(app.$('.card .tr'));
   assert.ok(app.$('.card input.answer').disabled);
-  assert.ok(app.$('.card .grades'), 'оценку ставит ученик');
+  assert.ok(app.$('.card .grades'), 'the learner gives the grade');
 });
 
-test('сессия: точный ответ — «Точно!», Enter проверяет', async t => {
+test('session: an exact answer shows the exact verdict; Enter checks', async t => {
   const app = await reviewing(t);
   for (let i = 0; i < 8; i++) {
     app.key(' ');
@@ -226,7 +227,7 @@ test('сессия: точный ответ — «Точно!», Enter пров�
   assert.equal(app.$('.diff'), null);
 });
 
-test('сессия: кнопки ñ, á и др. вставляют символ в позицию курсора', async t => {
+test('session: ñ, á etc. buttons insert the character at the cursor', async t => {
   const app = await reviewing(t);
   for (let i = 0; i < 8; i++) {
     app.key(' ');
@@ -239,11 +240,11 @@ test('сессия: кнопки ñ, á и др. вставляют символ
   assert.equal(input.value, 'español');
 });
 
-test('сессия: по истечении времени текущая карточка доигрывается, затем итог', async t => {
+test('session: when time runs out the current card is finished, then the summary', async t => {
   const app = await reviewing(t);
   app.advance(15 * 60 * 1000 + 1000);
   await app.waitFor(() => app.$('.timer.over'), 2500);
-  assert.ok(app.$('.card'), 'карточка не обрывается');
+  assert.ok(app.$('.card'), 'the card is not cut off');
   app.key(' ');
   app.grade('Нормально');
   assert.match(app.text('main'), /Сессия окончена/);
@@ -251,7 +252,7 @@ test('сессия: по истечении времени текущая кар
   assert.match(app.text('main'), /Ещё к повторению: 15/);
 });
 
-test('сессия: когда карточки закончились — итог «всё повторено»', async t => {
+test('session: when cards run out the summary says everything is reviewed', async t => {
   const app = await reviewing(t);
   for (let i = 0; i < 16; i++) {
     app.answer('x');
@@ -261,9 +262,9 @@ test('сессия: когда карточки закончились — ит�
   assert.match(app.text('main'), /На сегодня всё повторено/);
 });
 
-// ---------- прогресс: экспорт и импорт ----------
+// ---------- progress: export and import ----------
 
-test('экспорт: запоминает дату сохранения и убирает напоминание', t => {
+test('export: records the save date and removes the reminder', t => {
   const app = setup(t, { progress: lessonOneProgress() });
   assert.match(app.text('.warn'), /ни разу не сохранялся/);
   app.byText('button', 'Сохранить прогресс в файл').click();
@@ -271,12 +272,12 @@ test('экспорт: запоминает дату сохранения и уб
   assert.ok(!/ни разу не сохранялся/.test(app.text('main')));
 });
 
-test('экспорт: напоминание через неделю после сохранения', t => {
+test('export: reminder a week after the last save', t => {
   const app = setup(t, { progress: lessonOneProgress({ lastExport: START - 8 * DAY }) });
   assert.match(app.text('.warn'), /8 дней назад/);
 });
 
-test('импорт: чужой файл отклоняется, файл прогресса заменяет текущий', async t => {
+test('import: a foreign file is rejected, a progress file replaces current progress', async t => {
   const app = setup(t);
   const input = app.$('input[type=file]');
 
@@ -290,7 +291,7 @@ test('импорт: чужой файл отклоняется, файл про�
   assert.equal(Object.keys(app.progress().cards).length, 16);
 });
 
-test('импорт: отказ в подтверждении ничего не меняет', async t => {
+test('import: declining the confirmation changes nothing', async t => {
   const app = setup(t);
   app.setConfirm(false);
   await app.upload(app.$('input[type=file]'), JSON.stringify(lessonOneProgress()));
@@ -298,15 +299,15 @@ test('импорт: отказ в подтверждении ничего не �
   assert.equal(app.progress(), null);
 });
 
-test('хранилище: испорченные данные не мешают запуску', t => {
-  const app = setup(t, { rawProgress: '{не json' });
+test('storage: corrupted data does not prevent startup', t => {
+  const app = setup(t, { rawProgress: '{not json' });
   const st = clone(app.window.Store.get());
   assert.deepEqual(st.cards, {});
   assert.equal(st.settings.sessionMinutes, 15);
   assert.equal(app.$$('.lessons li').length, 10);
 });
 
-test('хранилище: недостающие поля дополняются, мусор отбрасывается', t => {
+test('storage: missing fields get defaults, junk is dropped', t => {
   const app = setup(t, { progress: { completedLessons: [1, 'x', null], cards: {}, settings: {} } });
   const st = clone(app.window.Store.get());
   assert.deepEqual(st.completedLessons, [1]);
@@ -314,9 +315,9 @@ test('хранилище: недостающие поля дополняются
   assert.equal(st.lastExport, null);
 });
 
-// ---------- озвучка ----------
+// ---------- speech ----------
 
-test('голос: из нескольких es-ES выбирается Natural/Online', t => {
+test('voice: among several es-ES voices a Natural/Online one is chosen', t => {
   const app = setup(t, {
     voices: [
       { name: 'English', lang: 'en-US' },
@@ -329,13 +330,13 @@ test('голос: из нескольких es-ES выбирается Natural/O
   assert.match(app.text('main'), /Голос: Microsoft Elvira/);
 });
 
-test('голос: без es-ES берётся другой испанский и показывается подсказка', t => {
+test('voice: without es-ES another Spanish voice is used and a hint is shown', t => {
   const app = setup(t, { voices: [{ name: 'Mexicano', lang: 'es-MX' }] });
   assert.equal(app.window.Speech.isSpanishSpain(), false);
   assert.match(app.text('main'), /Голос для Испании не найден/);
 });
 
-test('голос: без синтеза речи тренажёр работает и предупреждает', async t => {
+test('voice: without speech synthesis the trainer works and warns', async t => {
   const app = setup(t, { speech: false, hash: '#/lesson/1' });
   app.$('.phrase button[title="Слушать"]').click();
   await app.go('#/');

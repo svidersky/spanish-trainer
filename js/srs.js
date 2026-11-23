@@ -1,12 +1,12 @@
-// Интервальное повторение по SM-2 (как в Anki), с четырьмя Оценками.
-// Работает и в браузере (window.SRS), и в Node (module.exports) — для тестов.
+// Spaced repetition with SM-2 (as in Anki), using four Grades.
+// Works in the browser (window.SRS) and in Node (module.exports) for tests.
 (function (root) {
   'use strict';
 
   const DAY = 24 * 60 * 60 * 1000;
   const LEARNED_DAYS = 21;
 
-  // Оценка ученика -> качество ответа q в терминах SM-2 (0..5).
+  // Learner's Grade -> SM-2 response quality q (0..5).
   const QUALITY = { again: 1, hard: 3, good: 4, easy: 5 };
   const GRADES = ['again', 'hard', 'good', 'easy'];
 
@@ -16,14 +16,14 @@
     return d.getTime();
   }
 
-  // Новая Карточка доступна для повторения сразу.
+  // A new Card is due immediately.
   function newCard(now) {
     return { ef: 2.5, reps: 0, interval: 0, lapses: 0, due: now, last: null };
   }
 
   function review(card, grade, now) {
     const q = QUALITY[grade];
-    if (q === undefined) throw new Error('Неизвестная оценка: ' + grade);
+    if (q === undefined) throw new Error('Unknown grade: ' + grade);
 
     let { ef, reps, interval, lapses } = card;
 
@@ -40,7 +40,7 @@
 
     ef = Math.max(1.3, ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)));
 
-    // Срок — начало дня, чтобы карточка была доступна с утра нужного дня.
+    // Due at the start of the day, so the Card is available from the morning of that day.
     const due = startOfDay(now) + interval * DAY;
     return { ef: round2(ef), reps, interval, lapses, due, last: now };
   }

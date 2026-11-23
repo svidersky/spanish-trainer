@@ -1,4 +1,4 @@
-// Озвучка Фраз встроенным голосом браузера (es-ES).
+// Speaks Phrases with the browser's built-in speech synthesis (es-ES voice).
 (function (root) {
   'use strict';
 
@@ -26,7 +26,7 @@
       : (synth.onvoiceschanged = pickVoice);
   }
 
-  // Возвращает Promise, который выполняется по окончании фразы (или ошибке).
+  // Returns a Promise that resolves when the utterance ends (or fails).
   function speak(text, { rate = 0.9 } = {}) {
     return new Promise(resolve => {
       if (!supported) return resolve();
