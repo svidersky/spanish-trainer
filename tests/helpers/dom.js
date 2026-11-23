@@ -23,7 +23,10 @@ function boot({
   const errors = [];
   const virtualConsole = new VirtualConsole();
   // jsdom cannot navigate to the blob URL used by export; that is not an app error.
-  virtualConsole.on('jsdomError', e => { if (!/navigation/i.test(e.message)) errors.push(e.message); });
+  virtualConsole.on('jsdomError', e => {
+    if (e.type === 'not-implemented' && /navigation/i.test(e.message)) return;
+    errors.push(`${e.type}: ${e.message}`);
+  });
   virtualConsole.on('error', (...args) => errors.push(args.join(' ')));
 
   const html = read('index.html').replace(/<script\b[^>]*><\/script>/g, '');
