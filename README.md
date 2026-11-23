@@ -9,9 +9,16 @@ The project's terms are defined in [CONTEXT.md](CONTEXT.md). The learner-facing 
 
 ## Running it
 
-Open `index.html` by double-clicking it. **Microsoft Edge** works best: it ships good online Spanish voices.
+**On any device, including a phone:** open https://svidersky.github.io/spanish-trainer/ (GitHub Pages, deployed from `main`).
 
-If the trainer says no Spanish voice was found, add one in Windows: *Settings → Time & language → Speech → Add voices → Español (España)*.
+**Locally:** open `index.html` by double-clicking it. **Microsoft Edge** works best: it ships good online Spanish voices.
+
+If no Spanish voice is found, the trainer shows where to add one for the current device. The menu paths follow the vendors' support pages:
+- **iPhone/iPad:** Settings → Accessibility → Read & Speak → Voices ([Apple](https://support.apple.com/guide/iphone/hear-iphone-speak-the-screen-selection-iph96b214f0/ios)).
+- **Android:** Settings → Accessibility → Text-to-speech output → Install voice data ([Google](https://support.google.com/accessibility/android/answer/6006983)).
+- **Windows:** Language & region → Add a language → Spanish (Spain) with Text-to-speech ([Microsoft](https://support.microsoft.com/en-us/windows/download-languages-and-voices-for-immersive-reader-read-mode-and-read-aloud-4c83a8d8-7486-42f7-8e46-2b0fdf753130)).
+
+Progress is stored per device and browser. To move it, export it to a file on one device and import it on the other.
 
 ## Progress
 

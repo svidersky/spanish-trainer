@@ -19,6 +19,8 @@ function boot({
   rawProgress,
   voices = [{ name: 'Test Voice', lang: 'es-ES' }],
   speech = true,
+  userAgent,
+  maxTouchPoints = 0,
 } = {}) {
   const errors = [];
   const virtualConsole = new VirtualConsole();
@@ -37,6 +39,9 @@ function boot({
     virtualConsole,
   });
   const w = dom.window;
+
+  if (userAgent) Object.defineProperty(w.navigator, 'userAgent', { get: () => userAgent, configurable: true });
+  Object.defineProperty(w.navigator, 'maxTouchPoints', { get: () => maxTouchPoints, configurable: true });
 
   // Controllable clock: the app reads time only through Date.now().
   let now = START;
