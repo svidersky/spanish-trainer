@@ -1,0 +1,15 @@
+{
+  "name": "spanish-trainer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Тренажёр испанского: уроки в стиле Assimil и карточки SM-2",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

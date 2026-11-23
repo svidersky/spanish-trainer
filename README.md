@@ -25,8 +25,15 @@
 
 ## Тесты
 
-Тесты планировщика SM-2 и сравнения ответов лежат в [tests/core.test.js](tests/core.test.js). Нужен Node.js 18 или новее:
+Нужен Node.js 20 или новее. Тесты запускаются так:
 
 ```
-node --test tests/
+npm install
+npm test
 ```
+
+- [tests/core.test.js](tests/core.test.js) проверяет планировщик SM-2 и сравнение ответов.
+- [tests/lessons.test.js](tests/lessons.test.js) проверяет данные уроков: уникальные `id`, ударения в транскрипции, пары знаков ¿? и ¡!.
+- [tests/ui.test.js](tests/ui.test.js) проверяет экраны в jsdom: урок, отметку «пройден», сессию с обоими направлениями карточек, таймер, экспорт и импорт, выбор голоса.
+
+Тесты запускаются в GitHub Actions на каждый PR и на каждый push в `main` ([.github/workflows/test.yml](.github/workflows/test.yml)).

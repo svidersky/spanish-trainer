@@ -181,7 +181,8 @@
       type: 'number', min: '1', max: '120', value: st.settings.sessionMinutes, class: 'answer',
       style: 'width:90px;font-size:17px;padding:6px 8px', 'aria-label': 'Длительность сессии в минутах',
       onchange: e => {
-        const v = Math.min(120, Math.max(1, Math.round(Number(e.target.value) || 15)));
+        const n = Number(e.target.value);
+        const v = e.target.value.trim() !== '' && Number.isFinite(n) ? Math.min(120, Math.max(1, Math.round(n))) : 15;
         st.settings.sessionMinutes = v;
         saveOrWarn();
         route();
