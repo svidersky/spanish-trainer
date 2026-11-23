@@ -25,7 +25,7 @@ In the transcription, put an apostrophe right after the stressed vowel: `"о'л�
 
 ## Tests
 
-Requires Node.js 20 or newer:
+Requires Node.js 22.22.2+, 24.15.0+ or 26+ (the minimum for jsdom 31):
 
 ```
 npm install
@@ -36,4 +36,4 @@ npm test
 - [tests/lessons.test.js](tests/lessons.test.js) checks lesson data: unique ids, stress marks in transcriptions, paired ¿? and ¡! marks.
 - [tests/ui.test.js](tests/ui.test.js) runs the screens in jsdom: lessons, marking a lesson completed, a session with both card directions, the timer, export and import, and voice selection.
 
-GitHub Actions runs the tests on every pull request and on every push to `main` ([.github/workflows/test.yml](.github/workflows/test.yml)).
+GitHub Actions runs the tests on every pull request and on every push to `main` ([.github/workflows/test.yml](.github/workflows/test.yml)), on Node 24 LTS.
