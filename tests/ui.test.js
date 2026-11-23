@@ -336,6 +336,30 @@ test('voice: without es-ES another Spanish voice is used and a hint is shown', t
   assert.match(app.text('main'), /Голос для Испании не найден/);
 });
 
+const UA = {
+  iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+  ipad: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+  android: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36',
+  windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0',
+  mac: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+};
+
+for (const [name, userAgent, touch, expected, notExpected] of [
+  ['iPhone', UA.iphone, 5, /На iPhone\/iPad/, /Windows|Android/],
+  ['iPad (reports as Mac, has touch)', UA.ipad, 5, /На iPhone\/iPad/, /На Mac/],
+  ['Android', UA.android, 5, /На Android/, /Windows|iPhone/],
+  ['Windows', UA.windows, 0, /В Windows/, /Android|iPhone/],
+  ['Mac', UA.mac, 0, /На Mac/, /Windows|Android/],
+]) {
+  test(`voice: missing-voice hint is specific to ${name}`, t => {
+    const app = setup(t, { voices: [], userAgent, maxTouchPoints: touch });
+    const hint = app.text('main');
+    assert.match(hint, /Испанский голос не найден/);
+    assert.match(hint, expected);
+    assert.doesNotMatch(hint, notExpected);
+  });
+}
+
 test('voice: without speech synthesis the trainer works and warns', async t => {
   const app = setup(t, { speech: false, hash: '#/lesson/1' });
   app.$('.phrase button[title="Слушать"]').click();

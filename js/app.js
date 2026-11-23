@@ -233,9 +233,31 @@
     if (!Speech.supported) return [h('span', { class: 'warn' }, 'Этот браузер не умеет озвучивать текст. Откройте тренажёр в Microsoft Edge или Chrome.')];
     const v = Speech.voice();
     if (v && Speech.isSpanishSpain()) return ['Голос: ' + v.name];
-    const how = 'Установите испанский голос: Параметры Windows → Время и язык → Речь → Добавить голоса → Español (España). Или откройте тренажёр в Microsoft Edge — там есть онлайн-голоса.';
+    const how = VOICE_HELP[platform()];
     if (v) return [h('div', { class: 'warn' }, `Голос для Испании не найден, использую «${v.name}». ${how}`)];
     return [h('div', { class: 'warn' }, 'Испанский голос не найден. ' + how)];
+  }
+
+  // Where to add a Spanish (Spain) voice. Menu paths follow the vendors' support pages:
+  // Apple iPhone User Guide "Hear iPhone speak the screen", Google Android Accessibility Help
+  // "Text-to-speech output", Microsoft Support "Download languages and voices for Immersive Reader".
+  const VOICE_HELP = {
+    ios: 'На iPhone/iPad: Настройки → Универсальный доступ → чтение вслух (Read & Speak) → Голоса → Español → España. Звука не будет, если включён беззвучный режим.',
+    android: 'На Android: Настройки → Специальные возможности → Синтез речи (Text-to-speech output) → установить голосовые данные (Install voice data) → испанский (Испания).',
+    windows: 'В Windows: Параметры → Время и язык → Язык и регион → Добавить язык → Español (España) с отметкой «Преобразование текста в речь». Или откройте тренажёр в Microsoft Edge — там есть онлайн-голоса.',
+    mac: 'На Mac: добавьте испанский голос (Испания) в Системных настройках, раздел «Универсальный доступ». Или откройте тренажёр в Chrome.',
+    other: 'Установите испанский голос (Испания) в настройках синтеза речи вашей системы или откройте тренажёр в Microsoft Edge или Chrome.',
+  };
+
+  function platform() {
+    const nav = window.navigator;
+    const ua = nav.userAgent || '';
+    // iPadOS reports itself as a Mac, but has touch.
+    if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && nav.maxTouchPoints > 1)) return 'ios';
+    if (/Android/i.test(ua)) return 'android';
+    if (/Windows/.test(ua)) return 'windows';
+    if (/Macintosh|Mac OS X/.test(ua)) return 'mac';
+    return 'other';
   }
 
   function exportProgress() {
