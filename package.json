@@ -1,0 +1,15 @@
+{
+  "name": "spanish-trainer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Spanish trainer: Assimil-style lessons and SM-2 flashcards",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

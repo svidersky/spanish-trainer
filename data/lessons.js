@@ -1,15 +1,17 @@
-// Уроки в стиле Assimil. Испанский — вариант Испании (es-ES).
+// Assimil-style Lessons. Spanish is the Spain variant (es-ES).
+// Lesson titles and phrases are Spanish; translations, notes and Transcriptions are
+// learner-facing and therefore Russian.
 //
-// Формат Фразы:
-//   id — уникальный, не меняйте его после того, как урок пройден (на нём держится прогресс)
-//   es — испанский текст
-//   tr — Транскрипция русскими буквами; апостроф ставится СРАЗУ ПОСЛЕ ударной гласной: "о'ла" → «о́ла»
-//   ru — русский перевод
+// Phrase format:
+//   id — unique; never change it once the Lesson has been Completed (progress is keyed on it)
+//   es — Spanish text
+//   tr — Transcription in Russian letters; put an apostrophe RIGHT AFTER the stressed vowel: "о'ла" → «о́ла»
+//   ru — Russian translation
 //
-// Условности Транскрипции:
-//   c (перед e, i) и z в Испании звучат как английское th в «think» — пишем «с».
-//   ll и y — «й»; j и g (перед e, i) — «х»; h не читается; v = b — «б»; ñ — «нь».
-//   Согласная + e пишется «э»: «de» → «дэ».
+// Transcription conventions:
+//   c (before e, i) and z sound like English "th" in "think" in Spain — written «с».
+//   ll and y — «й»; j and g (before e, i) — «х»; h is silent; v = b — «б»; ñ — «нь».
+//   Consonant + e is written «э»: "de" → «дэ».
 
 window.LESSONS = [
   {

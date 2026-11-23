@@ -1,4 +1,5 @@
-// Экраны тренажёра: главная, Урок, Сессия повторения.
+// Trainer screens: home, Lesson, review Session.
+// UI strings are learner-facing and therefore Russian.
 (function () {
   'use strict';
 
@@ -11,13 +12,13 @@
   };
   const GRADE_LABEL = { again: 'Забыл', hard: 'Трудно', good: 'Нормально', easy: 'Легко' };
 
-  // id Фразы -> { phrase, lesson, order }
+  // Phrase id -> { phrase, lesson, order }
   const phraseIndex = new Map();
   LESSONS.forEach(lesson =>
     lesson.phrases.forEach((phrase, order) => phraseIndex.set(phrase.id, { phrase, lesson, order }))
   );
 
-  // ---------- утилиты ----------
+  // ---------- helpers ----------
 
   function h(tag, attrs, ...children) {
     const el = document.createElement(tag);
@@ -34,7 +35,7 @@
     return el;
   }
 
-  // "о'ла" -> «о́ла»: апостроф после гласной превращается в знак ударения.
+  // "о'ла" -> «о́ла»: an apostrophe after a vowel becomes a combining stress mark.
   function stress(text) {
     return text.replace(/([аеёиоуыэюяАЕЁИОУЫЭЮЯ])'/g, '$1́');
   }
@@ -77,7 +78,7 @@
     return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
   }
 
-  // Карточки, относящиеся к существующим Фразам (на случай удалённых из уроков).
+  // Cards whose Phrase still exists (a Phrase may have been removed from the Lessons).
   function liveCards() {
     const cards = Store.get().cards;
     return Object.keys(cards).filter(k => phraseIndex.has(parseKey(k).id));
@@ -94,8 +95,8 @@
     return { due, learned, total };
   }
 
-  // Порядок в Сессии: сначала самые просроченные; при равенстве — Узнавание раньше Воспроизведения,
-  // чтобы новые Фразы сначала узнавались, а потом вспоминались.
+  // Session order: the longest-overdue Cards first; on a tie Recognition comes before Production,
+  // so a new Phrase is recognised before the learner has to produce it.
   function queueOrder(a, b) {
     const cards = Store.get().cards;
     const ca = cards[a], cb = cards[b];
@@ -125,7 +126,7 @@
     }
   }
 
-  // ---------- маршрутизация ----------
+  // ---------- routing ----------
 
   let cleanup = null;
 
@@ -142,7 +143,7 @@
 
   window.addEventListener('hashchange', route);
 
-  // ---------- главная ----------
+  // ---------- home ----------
 
   function renderHome() {
     const st = Store.get();
@@ -176,12 +177,13 @@
       }),
     );
 
-    // Настройки и страховка прогресса
+    // Settings and progress backup
     const minutes = h('input', {
       type: 'number', min: '1', max: '120', value: st.settings.sessionMinutes, class: 'answer',
       style: 'width:90px;font-size:17px;padding:6px 8px', 'aria-label': 'Длительность сессии в минутах',
       onchange: e => {
-        const v = Math.min(120, Math.max(1, Math.round(Number(e.target.value) || 15)));
+        const n = Number(e.target.value);
+        const v = e.target.value.trim() !== '' && Number.isFinite(n) ? Math.min(120, Math.max(1, Math.round(n))) : 15;
         st.settings.sessionMinutes = v;
         saveOrWarn();
         route();
@@ -269,7 +271,7 @@
     reader.readAsText(file);
   }
 
-  // ---------- Урок ----------
+  // ---------- Lesson ----------
 
   function renderLesson(nStr) {
     const idx = LESSONS.findIndex(l => String(l.n) === nStr);
@@ -286,7 +288,7 @@
       ));
     const dialog = h('ol', { class: 'dialog' }, items);
 
-    // Проигрывание: фраза → пауза для повтора вслух → следующая.
+    // Playback: Phrase → pause to repeat aloud → next Phrase.
     let runId = 0;
     const status = h('div', { class: 'status', 'aria-live': 'polite' });
     const playBtn = h('button', { class: 'primary', onclick: () => (runId && playing ? stop() : playAll()) }, '▶ Слушать и повторять');
@@ -346,11 +348,11 @@
       h('h1', null, `Урок ${lesson.n}. `, h('span', { lang: 'es' }, lesson.title)),
       h('p', { class: 'sub' }, lesson.ru),
       h('div', { class: 'player' }, h('div', { class: 'row' }, playBtn), status),
-      Speech.supported && !Speech.voice() ? h('div', null, voiceInfo()) : null,
+      ...(Speech.supported && !Speech.voice() ? [h('div', null, voiceInfo())] : []),
       dialog,
-      lesson.notes && lesson.notes.length
+      ...(lesson.notes && lesson.notes.length
         ? [h('h2', null, 'Пояснения'), h('ul', { class: 'notes' }, lesson.notes.map(n => h('li', null, n)))]
-        : null,
+        : []),
       h('h2', null, 'Готово?'),
       completion,
       h('nav', { class: 'lesson-nav' },
@@ -360,7 +362,7 @@
     );
   }
 
-  // ---------- Сессия ----------
+  // ---------- Session ----------
 
   function renderReview() {
     const st = Store.get();
@@ -474,7 +476,7 @@
     function gradeBar(key) {
       const now = Date.now();
       const card = st.cards[key];
-      // Защита от «проскочившего» нажатия: та же клавиша, что открыла ответ, не должна сразу ставить оценку.
+      // Guard against a bounced key press: the key that revealed the answer must not also set the Grade.
       const safeGrade = g => { if (Date.now() - now > 300) grade(key, g); };
       const bar = h('div', null,
         h('div', { class: 'grades' },
@@ -498,7 +500,7 @@
       st.cards[key] = SRS.review(st.cards[key], g, Date.now());
       saveOrWarn();
       reviewed++;
-      // «Забыл» — карточка вернётся ещё раз в этой же Сессии.
+      // "again": the Card comes back once more in this same Session.
       if (g === 'again') queue.push(key);
       next();
     }
