@@ -4,3 +4,5 @@
 - **Domain terms.** Use the glossary in [CONTEXT.md](CONTEXT.md) (Lesson, Phrase, Card, Recognition, Production, Grade, Session, Deck, Learned, Transcription).
 - **No build step.** The app must keep working when `index.html` is opened from disk: plain `<script>` tags, no ES modules, no `fetch` of local files.
 - **Tests.** `npm test` (Node 20+, jsdom). See README.
+- **Dependencies: well-known libraries only.** Add a library only if it is widely used and actively maintained (e.g. jsdom, Playwright). No obscure or single-maintainer packages, and no copy-pasted snippets of unknown origin. Prefer the platform (browser APIs, `node:test`) when it does the job.
+- **Library facts come from the source, not from memory.** Before adding, upgrading or using a library API, check its official website, docs or registry page (e.g. npmjs.com, the project's GitHub releases) for the current version, API and requirements. Do not rely on remembered versions or signatures.
