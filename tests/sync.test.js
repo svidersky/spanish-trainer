@@ -5,17 +5,17 @@ const assert = require('node:assert/strict');
 const { boot, lessonOneProgress, START, DAY } = require('./helpers/dom');
 
 let worker;
-let fakeKv;
+let fakeProfiles;
 test.before(async () => {
-  worker = (await import('../worker/src/index.js')).default;
-  ({ fakeKv } = await import('./helpers/kv.mjs'));
+  worker = (await import('../worker/src/router.js')).default;
+  ({ fakeProfiles } = await import('./helpers/do.mjs'));
 });
 
 const NAME = 'leonid';
 const PIN = '4831';
 
 function cloud() {
-  const env = { PROGRESS: fakeKv(), now: () => Date.now() };
+  const env = { PROFILES: fakeProfiles() };
   const calls = [];
   let offline = false;
   return {

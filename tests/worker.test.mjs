@@ -1,14 +1,15 @@
-// The Sync server (Cloudflare Worker): Profiles (name + PIN), lockout, optimistic versioning.
+// The Sync server (Cloudflare Worker + one Durable Object per Profile): name + PIN, lockout,
+// versioned saves that never overwrite each other, even when two arrive at the same moment.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import worker from '../worker/src/index.js';
-import { fakeKv } from './helpers/kv.mjs';
+import worker from '../worker/src/router.js';
+import { fakeProfiles } from './helpers/do.mjs';
 
 const HOUR = 60 * 60 * 1000;
 
 function server() {
   let now = Date.UTC(2026, 10, 24, 12);
-  const env = { PROGRESS: fakeKv(), now: () => now };
+  const env = { PROFILES: fakeProfiles(() => now) };
   const call = async (path, body, method = 'POST') => {
     const init = { method, headers: { 'Content-Type': 'application/json' } };
     if (body !== undefined) init.body = typeof body === 'string' ? body : JSON.stringify(body);
@@ -148,13 +149,13 @@ test('creating a Profile that already exists is a version conflict, not a takeov
 test('the PIN is not stored in plain text', async () => {
   const { env, call } = server();
   await call('/save', { name: 'leonid', pin: '4831', version: 0, progress: { cards: {} } });
-  // Look at every stored string value (not the raw text: a random salt or hash could contain "4831").
+  // Look at every stored string value (not raw text: a random salt or hash could contain "4831").
   const values = [];
   const walk = v => {
     if (typeof v === 'string') values.push(v);
     else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => { values.push(k); walk(x); });
   };
-  for (const text of env.PROGRESS.raw().values()) walk(JSON.parse(text));
+  env.PROFILES.storedValues().forEach(walk);
   assert.ok(!values.includes('4831'), 'no stored value is the PIN');
   assert.ok(!values.includes('pin'), 'no "pin" field is stored');
 });
@@ -163,4 +164,35 @@ test('bodies over 512 KB are rejected with 413', async () => {
   const { call } = server();
   const big = { name: 'leonid', pin: '4831', version: 0, progress: { pad: 'x'.repeat(600 * 1024) } };
   assert.equal((await call('/save', big)).status, 413);
+});
+
+test('two saves racing to create the same Profile: one wins, the other gets 409', async () => {
+  const { call } = server();
+  const a = { ...PROGRESS, completedLessons: [1] };
+  const b = { ...PROGRESS, completedLessons: [2] };
+  const results = await Promise.all([
+    call('/save', { name: 'leonid', pin: '4831', version: 0, progress: a }),
+    call('/save', { name: 'leonid', pin: '4831', version: 0, progress: b }),
+  ]);
+  assert.deepEqual(results.map(r => r.status).sort(), [200, 409]);
+  const loser = results.find(r => r.status === 409);
+  const loaded = await call('/load', { name: 'leonid', pin: '4831' });
+  assert.equal(loaded.body.version, 1);
+  assert.deepEqual(loser.body, loaded.body, 'the loser is handed the winner's copy to merge');
+});
+
+test('two saves racing at the same version of an existing Profile: exactly one is applied', async () => {
+  const { call } = server();
+  await call('/save', { name: 'leonid', pin: '4831', version: 0, progress: PROGRESS });
+  const results = await Promise.all([1, 2].map(n =>
+    call('/save', { name: 'leonid', pin: '4831', version: 1, progress: { ...PROGRESS, completedLessons: [n] } })));
+  assert.deepEqual(results.map(r => r.status).sort(), [200, 409]);
+  assert.equal((await call('/load', { name: 'leonid', pin: '4831' })).body.version, 2);
+});
+
+test('different Profiles do not wait for each other', async () => {
+  const { call } = server();
+  const results = await Promise.all(['leonid', 'ana'].map(name =>
+    call('/save', { name, pin: '4831', version: 0, progress: PROGRESS })));
+  assert.deepEqual(results.map(r => r.status), [200, 200]);
 });
