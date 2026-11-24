@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "BeforeEverything": [
+      { "hooks": [ { "type": "command", "command": "echo hi" } ] }
+    ]
+  }
+}
