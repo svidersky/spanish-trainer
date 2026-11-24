@@ -36,7 +36,7 @@
     try {
       const raw = root.localStorage.getItem(KEY);
       return raw ? normalize(JSON.parse(raw)) : empty();
-    } catch (err) {
+    } catch {
       return empty();
     }
   }
@@ -50,7 +50,7 @@
     try {
       root.localStorage.setItem(KEY, JSON.stringify(state));
       return true;
-    } catch (err) {
+    } catch {
       console.warn('Could not save progress', err);
       return false;
     }
