@@ -75,16 +75,29 @@ In the transcription, put an apostrophe right after the stressed vowel: `"о'л�
 Requires Node.js 22.22.2+, 24.15.0+ or 26+ (the minimum for jsdom 31):
 
 ```
-npm install
+npm ci
 npm test
 npm run lint
 ```
 
 `npm run lint` runs ESLint ([eslint.config.js](eslint.config.js)) over the app, the tests and the Sync server.
 
+`npm ci` installs exactly the versions recorded in `package-lock.json`. After changing `package.json`, update the lockfile in the same commit (`npm install --package-lock-only`), or CI fails.
+
 - [tests/core.test.js](tests/core.test.js) covers the SM-2 scheduler and answer comparison.
 - [tests/lessons.test.js](tests/lessons.test.js) checks lesson data: unique ids, stress marks in transcriptions, paired ¿? and ¡! marks.
 - [tests/ui.test.js](tests/ui.test.js) runs the screens in jsdom: home and the settings page, lessons, marking a lesson completed, a session with both card directions, the timer, Practice over not-yet-Learned cards, export and import, and voice selection.
 - [tests/monitoring.test.js](tests/monitoring.test.js) checks the Sentry setup: the environment tag, no personal data, and that index.html loads Sentry before the app.
 
-GitHub Actions runs the tests on every pull request and on every push to `main` ([.github/workflows/test.yml](.github/workflows/test.yml)), on Node 24 LTS, after the linter.
+### Mutation tests
+
+[StrykerJS](https://stryker-mutator.io) checks that the tests would notice a wrong answer, not just that they run the code: it makes one small change to the app at a time (a "mutant": `<` for `<=`, `true` for `false`, a removed call) and reruns the tests. A mutant that no test notices survives and points at a missing or too weak assertion.
+
+- On every pull request, [.github/workflows/mutation.yml](.github/workflows/mutation.yml) mutates only the lines of `js/*.js` the pull request added or changed ([tools/stryker-changed.mjs](tools/stryker-changed.mjs)) and fails when fewer than 80% of their mutants are caught. The log lists each survivor; the HTML report is in the run's artifacts.
+- Every Monday, and on demand from the Actions tab, it mutates the whole app as a report that never fails.
+- A mutant that behaves exactly like the original (an "equivalent" mutant) can be switched off with a comment that says why, e.g. `// Stryker disable next-line EqualityOperator: 0 and below give the same result`.
+- Locally: `npm run mutate` (whole app) or `node tools/stryker-changed.mjs origin/main`.
+
+The UI tests run the app inside jsdom, so [tests/helpers/dom.js](tests/helpers/dom.js) passes Stryker's state to the jsdom window; outside Stryker it does nothing.
+
+GitHub Actions runs the tests on every pull request and on every push to `main` ([.github/workflows/test.yml](.github/workflows/test.yml)), on Node 24 LTS, after the linter. The same workflow lints the workflows themselves with [jactionlint](https://jactionlint.jdx.dev): every action is pinned to a full commit SHA (with its version in a comment), and each job gets only the token permissions it needs. [Dependabot](.github/dependabot.yml) opens at most one pull request a week for the npm packages (with `package-lock.json`) and one for the actions (new SHAs and version comments), each for releases at least 7 days old.
