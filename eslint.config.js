@@ -6,7 +6,7 @@ const js = require('@eslint/js');
 const globals = require('globals');
 
 module.exports = defineConfig([
-  globalIgnores(['node_modules/', '.venv-piper/']),
+  globalIgnores(['node_modules/', '.venv-piper/', '.stryker-tmp/', 'reports/']),
   {
     files: ['**/*.js', '**/*.mjs'],
     plugins: { js },
@@ -39,7 +39,7 @@ module.exports = defineConfig([
     languageOptions: { sourceType: 'commonjs', globals: globals.node },
   },
   {
-    files: ['tests/**/*.mjs'],
+    files: ['tests/**/*.mjs', 'tools/**/*.mjs', 'stryker.config.mjs'],
     languageOptions: { sourceType: 'module', globals: globals.node },
   },
   {
