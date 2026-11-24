@@ -18,11 +18,11 @@ If no Spanish voice is found, the trainer shows where to add one for the current
 - **Android:** Settings → Accessibility → Text-to-speech output → Install voice data ([Google](https://support.google.com/accessibility/android/answer/6006983)).
 - **Windows:** Language & region → Add a language → Spanish (Spain) with Text-to-speech ([Microsoft](https://support.microsoft.com/en-us/windows/download-languages-and-voices-for-immersive-reader-read-mode-and-read-aloud-4c83a8d8-7486-42f7-8e46-2b0fdf753130)).
 
-Progress is stored per device and browser. To move it, export it to a file on one device and import it on the other.
+Progress is stored per device and browser. To move it, export it to a file on one device and import it on the other: both are on the settings page (the ⚙ gear in the header). While the progress has no recent file copy, the home screen reminds you and the gear shows a dot.
 
 ## Sync between devices
 
-On the home screen, enter a name and a 4-digit PIN (the same on every device). Progress then syncs automatically: when the app opens and a couple of seconds after every answer. The first sync with a new name creates its Profile; after 5 wrong PINs the name is locked for an hour.
+On the settings page (the ⚙ gear in the header), enter a name and a 4-digit PIN (the same on every device). Progress then syncs automatically: when the app opens and a couple of seconds after every answer. The first sync with a new name creates its Profile; after 5 wrong PINs the name is locked for an hour.
 
 The Sync server runs at `https://spanish-progress.spanish-trainer.workers.dev` (`DEFAULT_URL` in [js/sync.js](js/sync.js)). It is a Cloudflare Worker in [worker/](worker) with one SQLite-backed Durable Object per Profile (free plan). The object stores the Profile's progress with a salted SHA-256 of the PIN and a version number, and handles its requests strictly one at a time. The app merges ([js/merge.js](js/merge.js)) and saves with the version it started from; a save based on an old version gets the current copy back to merge, so two devices never overwrite each other, even when they save at the same moment. [.github/workflows/deploy-worker.yml](.github/workflows/deploy-worker.yml) deploys it on every change to `worker/` on `main`, using the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 
@@ -77,6 +77,6 @@ npm test
 
 - [tests/core.test.js](tests/core.test.js) covers the SM-2 scheduler and answer comparison.
 - [tests/lessons.test.js](tests/lessons.test.js) checks lesson data: unique ids, stress marks in transcriptions, paired ¿? and ¡! marks.
-- [tests/ui.test.js](tests/ui.test.js) runs the screens in jsdom: lessons, marking a lesson completed, a session with both card directions, the timer, Practice over not-yet-Learned cards, export and import, and voice selection.
+- [tests/ui.test.js](tests/ui.test.js) runs the screens in jsdom: home and the settings page, lessons, marking a lesson completed, a session with both card directions, the timer, Practice over not-yet-Learned cards, export and import, and voice selection.
 
 GitHub Actions runs the tests on every pull request and on every push to `main` ([.github/workflows/test.yml](.github/workflows/test.yml)), on Node 24 LTS.

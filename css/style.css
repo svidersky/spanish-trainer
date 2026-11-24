@@ -53,6 +53,18 @@ body {
   border-radius: 8px; background: var(--surface); color: var(--text);
 }
 .top .brand span { color: var(--text); font-weight: 500; margin-left: 6px; }
+.top .tools { display: flex; align-items: center; gap: 8px; }
+.top .gear {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); text-decoration: none; font-size: 20px; line-height: 1;
+}
+.top .gear:hover { border-color: var(--accent); color: var(--accent); }
+/* The progress needs a file copy: a dot on the gear. */
+.top .gear.attention::after {
+  content: ''; position: absolute; top: -4px; right: -4px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--warn); border: 2px solid var(--surface);
+}
 
 h1 { font-size: 26px; margin: 8px 0 4px; }
 h2 { font-size: 19px; margin: 28px 0 10px; }
@@ -142,6 +154,12 @@ button:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px sol
 .answer {
   width: 100%; font: inherit; font-size: 20px; padding: 10px 12px; border-radius: 10px;
   border: 1px solid var(--border); background: var(--bg); color: var(--text);
+}
+/* Sync: a name and a 4-digit PIN need little room; on a wide screen they sit in one line with the button. */
+.sync-form input[name="sync-name"] { flex: 1 1 180px; max-width: 260px; width: auto; }
+.sync-form input[name="sync-pin"] { flex: 0 0 110px; width: 110px; }
+@media (max-width: 520px) {
+  .sync-form input[name="sync-name"] { max-width: none; }
 }
 .accents { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .accents .key { padding: 4px 10px; min-width: 38px; justify-content: center; }

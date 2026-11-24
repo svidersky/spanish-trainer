@@ -6,8 +6,9 @@
 
   const LANGS = ['ru', 'en'];
   const DEFAULT = 'ru';
-  // Each language's name is written in that language, so anyone can find their own.
-  const NAMES = { ru: 'Русский', en: 'English' };
+  // Each language's name is written in that language, so anyone can find their own, after its flag
+  // (Windows shows a flag emoji as two letters, RU / GB, which still reads fine).
+  const NAMES = { ru: '🇷🇺 Русский', en: '🇬🇧 English' };
   // Locale for dates, times and plural rules.
   const LOCALE = { ru: 'ru-RU', en: 'en-GB' };
 
@@ -21,6 +22,8 @@
     ru: {
       appTitle: 'Испанский тренажёр',
       langLabel: 'Язык интерфейса',
+      settingsLabel: 'Настройки',
+      settingsAttention: 'Настройки: прогресс не сохранён в файл',
       dirRecog: 'Узнавание · ES → RU',
       dirProduce: 'Воспроизведение · RU → ES',
       gradeAgain: 'Забыл',
@@ -51,6 +54,7 @@
       practiceCardsLabel: 'Число карточек в тренировке',
       neverExported: 'Прогресс ещё ни разу не сохранялся в файл. Если очистить данные браузера, он пропадёт.',
       exportedAgo: days => `Последнее сохранение в файл было ${days} назад.`,
+      saveCopyLink: 'Сохранить копию →',
       recordingsInfo: 'Фразы озвучены заранее записанными голосами. Для новых фраз без записи — голос браузера. ',
       exportButton: '💾 Сохранить прогресс в файл',
       importButton: '📂 Загрузить из файла',
@@ -154,6 +158,8 @@
     en: {
       appTitle: 'Spanish Trainer',
       langLabel: 'Interface language',
+      settingsLabel: 'Settings',
+      settingsAttention: 'Settings: progress not saved to a file',
       dirRecog: 'Recognition · ES → EN',
       dirProduce: 'Production · EN → ES',
       gradeAgain: 'Again',
@@ -183,6 +189,7 @@
       practiceCardsLabel: 'Number of cards in a practice',
       neverExported: 'Your progress has never been saved to a file. If the browser data is cleared, it will be lost.',
       exportedAgo: days => `Last saved to a file ${days} ago.`,
+      saveCopyLink: 'Save a copy →',
       recordingsInfo: 'Phrases are voiced by pre-made recordings. New phrases without a recording use the browser voice. ',
       exportButton: '💾 Save progress to a file',
       importButton: '📂 Load from a file',

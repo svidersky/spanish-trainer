@@ -1,4 +1,4 @@
-// Trainer screens in jsdom: home, Lesson, Session, progress, speech.
+// Trainer screens in jsdom: home, settings, Lesson, Session, progress, speech.
 // Regexes match learner-facing UI text, which is Russian.
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -44,8 +44,8 @@ test('home: cards of removed phrases are ignored and break nothing', t => {
   assert.deepEqual(app.errors, []);
 });
 
-test('home: session length is clamped to 1–120 minutes', t => {
-  const app = setup(t);
+test('settings: session length is clamped to 1–120 minutes', t => {
+  const app = setup(t, { hash: '#/settings' });
   const set = value => {
     const input = app.$('input[type=number]');
     input.value = value;
@@ -58,8 +58,8 @@ test('home: session length is clamped to 1–120 minutes', t => {
   assert.equal(set('abc'), 15);
 });
 
-test('home: Practice size is clamped to 1–200 Cards and is a synced setting', t => {
-  const app = setup(t);
+test('settings: Practice size is clamped to 1–200 Cards and is a synced setting', t => {
+  const app = setup(t, { hash: '#/settings' });
   const field = () => app.$('input[aria-label="Число карточек в тренировке"]');
   assert.equal(field().value, '20', 'default is 20 Cards');
   const set = value => {
@@ -76,6 +76,104 @@ test('home: Practice size is clamped to 1–200 Cards and is a synced setting', 
   assert.equal(app.progress().settings.sessionMinutes, 15, 'the Session length is untouched');
 });
 
+// ---------- settings page ----------
+
+const gear = app => app.$('header a[href="#/settings"]');
+
+test('settings: a gear link in the header opens the settings page from every screen', async t => {
+  for (const hash of ['#/', '#/settings', '#/lesson/1', '#/review', '#/practice']) {
+    const app = setup(t, { hash, progress: lessonOneProgress({ lastExport: START - DAY }) });
+    const link = gear(app);
+    assert.ok(link, hash);
+    assert.equal(link.getAttribute('aria-label'), 'Настройки', hash);
+    assert.equal(link.title, 'Настройки', hash);
+  }
+  const app = setup(t, { progress: lessonOneProgress() });
+  gear(app).click();
+  await app.waitFor(() => app.$('main input[type=number]'));
+  assert.equal(app.window.location.hash, '#/settings');
+});
+
+test('settings: the page holds the backup, the settings and the voice; a link leads home', t => {
+  const app = setup(t, { hash: '#/settings', progress: lessonOneProgress({ lastExport: START - DAY }) });
+  assert.equal(app.text('main h1'), 'Прогресс и настройки');
+  assert.equal(app.document.title, 'Прогресс и настройки');
+  assert.ok(app.byText('main button', 'Сохранить прогресс в файл'));
+  assert.ok(app.byText('main button', 'Загрузить из файла'));
+  assert.ok(app.$('main input[type=file]'));
+  assert.ok(app.$('main input[aria-label="Длительность сессии в минутах"]'));
+  assert.ok(app.$('main input[aria-label="Число карточек в тренировке"]'));
+  assert.match(app.text('main'), /Последнее сохранение: /);
+  assert.match(app.text('main'), /Голос: Test Voice/);
+  assert.ok(app.$('main a[href="#/"]'), 'a way back home');
+  assert.equal(app.$('main .lessons'), null, 'no Lesson list here');
+  assert.deepEqual(app.errors, []);
+});
+
+test('settings: none of it is left on the home screen', t => {
+  const app = setup(t, { progress: lessonOneProgress({ lastExport: START - DAY }) });
+  assert.ok(app.$('.lessons'));
+  assert.equal(app.$('main input'), null, 'no settings fields, no file input');
+  assert.equal(app.$('main button'), null, 'no export or import buttons');
+  assert.doesNotMatch(app.text('main'), /Прогресс и настройки|Последнее сохранение|Голос:/);
+});
+
+test('settings: a changed setting keeps the page open and reaches the home screen', async t => {
+  const app = setup(t, { hash: '#/settings', progress: lessonOneProgress() });
+  const input = app.$('input[aria-label="Длительность сессии в минутах"]');
+  input.value = '25';
+  input.dispatchEvent(new app.window.Event('change'));
+  assert.equal(app.window.location.hash, '#/settings');
+  assert.equal(app.$('input[aria-label="Длительность сессии в минутах"]').value, '25');
+  await app.go('#/');
+  assert.match(app.text('a[href="#/review"]'), /25 мин/);
+});
+
+// ---------- export reminder on the home screen ----------
+
+const reminderLink = app => app.$('main .warn a[href="#/settings"]');
+
+test('reminder: never exported — the home screen warns, links to the settings page, the gear is marked', t => {
+  const app = setup(t, { progress: lessonOneProgress() });
+  assert.match(app.text('main .warn'), /ни разу не сохранялся/);
+  assert.ok(reminderLink(app), 'the reminder leads to the settings page');
+  assert.match(reminderLink(app).textContent, /Сохранить копию/);
+  assert.ok(gear(app).classList.contains('attention'));
+  assert.equal(gear(app).getAttribute('aria-label'), 'Настройки: прогресс не сохранён в файл');
+});
+
+test('reminder: a week after the last export the home screen says how long ago', t => {
+  const app = setup(t, { progress: lessonOneProgress({ lastExport: START - 8 * DAY }) });
+  assert.match(app.text('main .warn'), /8 дней назад/);
+  assert.ok(reminderLink(app));
+  assert.ok(gear(app).classList.contains('attention'));
+});
+
+test('reminder: none for an empty Deck or a recent export', t => {
+  for (const [where, progress] of [
+    ['empty deck', undefined],
+    ['exported yesterday', lessonOneProgress({ lastExport: START - DAY })],
+    ['exported 6 days ago', lessonOneProgress({ lastExport: START - 6 * DAY })],
+  ]) {
+    const app = setup(t, { progress });
+    assert.equal(reminderLink(app), null, where);
+    assert.doesNotMatch(app.text('main'), /сохранялся|сохранение в файл/, where);
+    assert.equal(gear(app).classList.contains('attention'), false, where);
+    assert.equal(gear(app).getAttribute('aria-label'), 'Настройки', where);
+  }
+});
+
+test('reminder: the gear mark is on every screen and goes away after an export', async t => {
+  const app = setup(t, { hash: '#/lesson/1', progress: lessonOneProgress() });
+  assert.ok(gear(app).classList.contains('attention'), 'on a Lesson page too');
+  await app.go('#/settings');
+  app.byText('button', 'Сохранить прогресс в файл').click();
+  assert.equal(gear(app).classList.contains('attention'), false, 'cleared right after the export');
+  await app.go('#/');
+  assert.equal(reminderLink(app), null);
+  assert.equal(gear(app).classList.contains('attention'), false);
+});
+
 // ---------- Lesson ----------
 
 test('lesson: Spanish text and stressed Transcription in parentheses', t => {
@@ -90,9 +188,15 @@ test('lesson: Spanish text and stressed Transcription in parentheses', t => {
 });
 
 test('no screen renders "null", "undefined" or "[object …]"', async t => {
-  for (const hash of ['#/', '#/lesson/1', '#/review', '#/practice']) {
+  for (const hash of ['#/', '#/settings', '#/lesson/1', '#/review', '#/practice']) {
     const app = setup(t, { hash, progress: lessonOneProgress() });
     assert.doesNotMatch(app.text('main'), /\bnull\b|\bundefined\b|\[object /, hash);
+  }
+  for (const hash of ['#/', '#/settings']) {
+    const empty = setup(t, { hash });
+    assert.doesNotMatch(empty.text('main'), /\bnull\b|\bundefined\b|\[object /, 'empty deck, ' + hash);
+    const saved = setup(t, { hash, progress: lessonOneProgress({ lastExport: START - DAY }) });
+    assert.doesNotMatch(saved.text('main'), /\bnull\b|\bundefined\b|\[object /, 'recent export, ' + hash);
   }
   const noVoice = setup(t, { hash: '#/lesson/1', voices: [] });
   assert.doesNotMatch(noVoice.text('main'), /\bnull\b|\bundefined\b|\[object /);
@@ -518,7 +622,7 @@ test('practice: "Не знаю" counts as "again"', async t => {
 // ---------- progress: export and import ----------
 
 test('export: records the save date and removes the reminder', t => {
-  const app = setup(t, { progress: lessonOneProgress() });
+  const app = setup(t, { hash: '#/settings', progress: lessonOneProgress() });
   assert.match(app.text('.warn'), /ни разу не сохранялся/);
   app.byText('button', 'Сохранить прогресс в файл').click();
   assert.equal(app.progress().lastExport, app.now());
@@ -526,12 +630,12 @@ test('export: records the save date and removes the reminder', t => {
 });
 
 test('export: reminder a week after the last save', t => {
-  const app = setup(t, { progress: lessonOneProgress({ lastExport: START - 8 * DAY }) });
+  const app = setup(t, { hash: '#/settings', progress: lessonOneProgress({ lastExport: START - 8 * DAY }) });
   assert.match(app.text('.warn'), /8 дней назад/);
 });
 
 test('import: a foreign file is rejected, a progress file replaces current progress', async t => {
-  const app = setup(t);
+  const app = setup(t, { hash: '#/settings' });
   const input = app.$('input[type=file]');
 
   await app.upload(input, '{"foo": 1}');
@@ -540,12 +644,15 @@ test('import: a foreign file is rejected, a progress file replaces current progr
   assert.equal(app.progress(), null);
 
   await app.upload(input, JSON.stringify(lessonOneProgress()));
-  await app.waitFor(() => app.$('.lessons li.done'));
+  await app.waitFor(() => app.progress());
   assert.equal(Object.keys(app.progress().cards).length, 16);
+  assert.equal(app.window.location.hash, '#/settings', 'the settings page stays open');
+  await app.go('#/');
+  assert.ok(app.$('.lessons li.done'), 'the home screen shows the imported progress');
 });
 
 test('import: declining the confirmation changes nothing', async t => {
-  const app = setup(t);
+  const app = setup(t, { hash: '#/settings' });
   app.setConfirm(false);
   await app.upload(app.$('input[type=file]'), JSON.stringify(lessonOneProgress()));
   await new Promise(r => setTimeout(r, 100));
@@ -579,13 +686,14 @@ test('voice: among several es-ES voices a Natural/Online one is chosen', t => {
       { name: 'Helena', lang: 'es-ES' },
       { name: 'Microsoft Elvira Online (Natural)', lang: 'es-ES' },
     ],
+    hash: '#/settings',
   });
   assert.equal(app.window.Speech.voice().name, 'Microsoft Elvira Online (Natural)');
   assert.match(app.text('main'), /Голос: Microsoft Elvira/);
 });
 
 test('voice: without es-ES another Spanish voice is used and a hint is shown', t => {
-  const app = setup(t, { voices: [{ name: 'Mexicano', lang: 'es-MX' }] });
+  const app = setup(t, { hash: '#/settings', voices: [{ name: 'Mexicano', lang: 'es-MX' }] });
   assert.equal(app.window.Speech.isSpanishSpain(), false);
   assert.match(app.text('main'), /Голос для Испании не найден/);
 });
@@ -606,7 +714,7 @@ for (const [name, userAgent, touch, expected, notExpected] of [
   ['Mac', UA.mac, 0, /На Mac/, /Windows|Android/],
 ]) {
   test(`voice: missing-voice hint is specific to ${name}`, t => {
-    const app = setup(t, { voices: [], userAgent, maxTouchPoints: touch });
+    const app = setup(t, { hash: '#/settings', voices: [], userAgent, maxTouchPoints: touch });
     const hint = app.text('main');
     assert.match(hint, /Испанский голос не найден/);
     assert.match(hint, expected);
@@ -617,8 +725,7 @@ for (const [name, userAgent, touch, expected, notExpected] of [
 test('voice: without speech synthesis the trainer works and warns', async t => {
   const app = setup(t, { speech: false, hash: '#/lesson/1' });
   app.$('.phrase button[title="Слушать"]').click();
-  await app.go('#/');
-  await app.waitFor(() => app.$('.lessons'));
+  await app.go('#/settings');
   assert.match(app.text('main'), /не умеет озвучивать/);
   assert.deepEqual(app.errors, []);
 });
