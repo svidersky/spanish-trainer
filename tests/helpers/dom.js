@@ -195,4 +195,4 @@ function lessonOneProgress(overrides = {}) {
   return { version: 1, completedLessons: [1], cards, settings: { sessionMinutes: 15 }, lastExport: null, ...overrides };
 }
 
-module.exports = { boot, lessonOneProgress, read, START, DAY, KEY, SYNC_KEY };
+module.exports = { boot, lessonOneProgress, read, shareMutationState, START, DAY, KEY, SYNC_KEY };
