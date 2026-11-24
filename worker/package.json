@@ -1,0 +1,6 @@
+{
+  "name": "spanish-progress-worker",
+  "private": true,
+  "type": "module",
+  "description": "Sync server for the Spanish trainer (Cloudflare Worker). Deployed by .github/workflows/deploy-worker.yml."
+}

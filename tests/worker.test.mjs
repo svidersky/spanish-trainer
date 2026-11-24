@@ -148,8 +148,15 @@ test('creating a Profile that already exists is a version conflict, not a takeov
 test('the PIN is not stored in plain text', async () => {
   const { env, call } = server();
   await call('/save', { name: 'leonid', pin: '4831', version: 0, progress: { cards: {} } });
-  const raw = [...env.PROGRESS.raw().values()].join('\n');
-  assert.doesNotMatch(raw, /4831/);
+  // Look at every stored string value (not the raw text: a random salt or hash could contain "4831").
+  const values = [];
+  const walk = v => {
+    if (typeof v === 'string') values.push(v);
+    else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => { values.push(k); walk(x); });
+  };
+  for (const text of env.PROGRESS.raw().values()) walk(JSON.parse(text));
+  assert.ok(!values.includes('4831'), 'no stored value is the PIN');
+  assert.ok(!values.includes('pin'), 'no "pin" field is stored');
 });
 
 test('bodies over 512 KB are rejected with 413', async () => {

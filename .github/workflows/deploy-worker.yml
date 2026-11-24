@@ -1,0 +1,21 @@
+# Deploys the Sync server (worker/) to Cloudflare when it changes on main.
+# Per https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/
+# Secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set in the repository settings.
+name: Deploy Sync server
+
+on:
+  push:
+    branches: [main]
+    paths: ['worker/**', '.github/workflows/deploy-worker.yml']
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker

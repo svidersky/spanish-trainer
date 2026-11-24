@@ -1,0 +1,10 @@
+// Cloudflare Worker config (format per https://developers.cloudflare.com/workers/wrangler/configuration/).
+{
+  "name": "spanish-progress",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-24",
+  "kv_namespaces": [
+    // The KV namespace "spanish-progress" created in the Cloudflare dashboard. The id is not a secret.
+    { "binding": "PROGRESS", "id": "45801d3e7e5141b0afc9613631a661f9" }
+  ]
+}

@@ -185,6 +185,7 @@
         const n = Number(e.target.value);
         const v = e.target.value.trim() !== '' && Number.isFinite(n) ? Math.min(120, Math.max(1, Math.round(n))) : 15;
         st.settings.sessionMinutes = v;
+        st.settingsUpdatedAt = Date.now();
         saveOrWarn();
         route();
       },
@@ -208,8 +209,9 @@
       ...voiceInfo(),
     );
     updateVoice();
-    const off = Speech.onChange(updateVoice);
-    cleanup = off;
+    const offVoice = Speech.onChange(updateVoice);
+    const sync = syncSection();
+    cleanup = () => { offVoice(); sync.off(); };
 
     $app.append(
       h('h1', null, 'Учим испанский'),
@@ -218,6 +220,7 @@
       h('h2', null, 'Уроки'),
       lessonList,
       h('h2', null, 'Прогресс и настройки'),
+      ...(sync.el ? [sync.el] : []),
       h('section', { class: 'panel' },
         exportReminder,
         h('div', { class: 'row' },
@@ -227,11 +230,79 @@
         ),
         h('p', { class: 'muted' }, st.lastExport
           ? 'Последнее сохранение: ' + new Date(st.lastExport).toLocaleString('ru-RU')
-          : 'Прогресс хранится только в этом браузере.'),
+          : window.Sync && Sync.profile()
+            ? 'Файл — дополнительная копия: прогресс уже синхронизируется.'
+            : 'Прогресс хранится только в этом браузере.'),
         h('div', { class: 'row' }, h('label', null, 'Длительность сессии, минут:'), minutes),
         voiceStatus,
       ),
     );
+  }
+
+  // ---------- Sync between devices ----------
+
+  // Re-draw the home screen when another device's progress arrives (other screens keep going:
+  // a review Session holds the same progress object, which Sync updates in place).
+  if (window.Sync) {
+    Sync.onData(() => {
+      const parts = (location.hash.slice(1) || '/').split('/').filter(Boolean);
+      if (!parts.length) route();
+    });
+  }
+
+  function syncStatusText(s) {
+    switch (s.state) {
+      case 'syncing': return 'Синхронизация…';
+      case 'ok': return 'Синхронизировано в ' + new Date(s.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) + '.';
+      case 'wrong-pin': return 'Неверный PIN для этого имени.';
+      case 'locked': return `Слишком много попыток с неверным PIN. Попробуйте через ${s.minutes} мин.`;
+      case 'offline': return 'Нет связи с сервером. Синхронизируем, когда связь появится.';
+      case 'invalid': return s.field === 'pin' ? 'PIN — это 4 цифры.' : 'Имя: от 2 до 32 букв или цифр (можно «-» и «_»).';
+      case 'error': return `Не удалось синхронизировать (ошибка ${s.code}).`;
+      default: return '';
+    }
+  }
+
+  function syncSection() {
+    if (!window.Sync) return { el: null, off: () => {} };
+
+    const status = h('p', { class: 'sync-status', 'aria-live': 'polite' });
+    const name = h('input', {
+      name: 'sync-name', type: 'text', class: 'answer', autocomplete: 'username', autocapitalize: 'off',
+      spellcheck: 'false', placeholder: 'Имя', 'aria-label': 'Имя профиля',
+    });
+    const pin = h('input', {
+      name: 'sync-pin', type: 'password', class: 'answer', inputmode: 'numeric', maxlength: '4',
+      autocomplete: 'current-password', placeholder: 'PIN', 'aria-label': 'PIN из 4 цифр',
+    });
+    const connect = () => Sync.connect(name.value, pin.value);
+    pin.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); connect(); } });
+
+    const form = h('div', { class: 'sync-form' },
+      h('p', { class: 'muted' }, 'Введите имя и PIN из 4 цифр — одинаковые на всех ваших устройствах. Если такого имени ещё нет, оно будет создано с этим PIN.'),
+      h('div', { class: 'row' }, name, pin, h('button', { type: 'button', class: 'primary', onclick: connect }, 'Подключить')),
+    );
+    const profileName = h('b');
+    const connected = h('div', null,
+      h('p', null, 'Профиль ', profileName, ': прогресс общий для всех устройств с этим именем и PIN.'),
+      h('div', { class: 'row' },
+        h('button', { type: 'button', onclick: () => Sync.syncNow() }, 'Синхронизировать сейчас'),
+        h('button', { type: 'button', onclick: () => Sync.disconnect() }, 'Отключить на этом устройстве'),
+      ),
+    );
+
+    const update = () => {
+      const profile = Sync.profile();
+      form.hidden = !!profile;
+      connected.hidden = !profile;
+      profileName.textContent = profile ? profile.name : '';
+      status.textContent = syncStatusText(Sync.status());
+    };
+    update();
+    const off = Sync.onStatus(update);
+
+    const el = h('section', { class: 'panel sync' }, h('h3', null, 'Синхронизация между устройствами'), form, connected, status);
+    return { el, off };
   }
 
   function voiceInfo() {

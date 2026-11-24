@@ -10,6 +10,7 @@
       completedLessons: [],
       cards: {},
       settings: { sessionMinutes: 15 },
+      settingsUpdatedAt: null,
       lastExport: null,
     };
   }
@@ -22,6 +23,7 @@
       completedLessons: Array.isArray(s.completedLessons) ? s.completedLessons.filter(Number.isFinite) : [],
       cards: s.cards && typeof s.cards === 'object' ? s.cards : {},
       settings: Object.assign(e.settings, s.settings && typeof s.settings === 'object' ? s.settings : {}),
+      settingsUpdatedAt: Number.isFinite(s.settingsUpdatedAt) ? s.settingsUpdatedAt : null,
       lastExport: Number.isFinite(s.lastExport) ? s.lastExport : null,
     };
   }
@@ -35,23 +37,38 @@
     }
   }
 
-  let state = load();
+  // The state object is never swapped for another one: screens may hold on to it (a review
+  // Session does), so replace() rewrites it in place.
+  const state = load();
+  const listeners = new Set();
+
+  function write() {
+    try {
+      root.localStorage.setItem(KEY, JSON.stringify(state));
+      return true;
+    } catch (err) {
+      console.warn('Could not save progress', err);
+      return false;
+    }
+  }
 
   const Store = {
     get() { return state; },
+    // Saves a change made on this device and tells listeners (e.g. Sync) about it.
     save() {
-      try {
-        root.localStorage.setItem(KEY, JSON.stringify(state));
-        return true;
-      } catch (err) {
-        console.warn('Could not save progress', err);
-        return false;
-      }
+      const ok = write();
+      listeners.forEach(fn => fn());
+      return ok;
     },
-    replace(data) {
-      state = normalize(data);
+    // Replaces all progress. { silent: true } is for data that came from Sync itself.
+    replace(data, { silent = false } = {}) {
+      const next = normalize(data);
+      Object.keys(state).forEach(k => delete state[k]);
+      Object.assign(state, next);
+      if (silent) return write();
       return Store.save();
     },
+    onSave(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     looksLikeProgress(data) {
       return !!data && typeof data === 'object' && typeof data.cards === 'object' && Array.isArray(data.completedLessons);
     },
