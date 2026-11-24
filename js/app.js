@@ -88,8 +88,8 @@
     let due = 0, learned = 0, total = 0;
     for (const k of liveCards()) {
       total++;
-      if (SRS.isDue(cards[k], now)) due++;
-      if (SRS.isLearned(cards[k])) learned++;
+      if (SRS.isDue(cards[k], now)) due += 1;
+      if (SRS.isLearned(cards[k])) learned += 1;
     }
     return { due, learned, total, notLearned: total - learned };
   }

@@ -67,11 +67,16 @@
     return card.interval >= LEARNED_DAYS;
   }
 
+  function daysUntilDue(card, now) {
+    if (card.due <= now) return 0;
+    return Math.ceil((card.due - startOfDay(now)) / DAY);
+  }
+
   function round2(x) {
     return Math.round(x * 100) / 100;
   }
 
-  const SRS = { DAY, LEARNED_DAYS, GRADES, FIRST_INTERVAL, newCard, review, isDue, isLearned, startOfDay };
+  const SRS = { DAY, LEARNED_DAYS, GRADES, FIRST_INTERVAL, newCard, review, isDue, isLearned, startOfDay, daysUntilDue };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = SRS;
   else root.SRS = SRS;

@@ -111,3 +111,7 @@ test('diff marks extra and missing characters', () => {
   const ops2 = Diff.diffChars('Holaa', 'Hola');
   assert.deepEqual(ops2, [{ type: 'same', text: 'Hola' }, { type: 'extra', text: 'a' }]);
 });
+
+test('PROOF ONLY: weak test for daysUntilDue', () => {
+  assert.equal(typeof SRS.daysUntilDue(SRS.newCard(NOW), NOW), 'number');
+});
