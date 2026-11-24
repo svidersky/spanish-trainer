@@ -497,11 +497,14 @@ test('sync: with a remembered Profile there is no file backup reminder, wherever
     ['exported 8 days ago', lessonOneProgress({ lastExport: START - 8 * DAY })],
   ]) {
     for (const hash of ['#/', '#/settings']) {
-      const app = device(t, cloud(), { hash, progress, syncConfig: { name: NAME, pin: PIN } });
+      const c = cloud();
+      const app = device(t, c, { hash, progress, syncConfig: { name: NAME, pin: PIN } });
       const label = `${where}, ${hash}`;
       assert.doesNotMatch(app.text('main'), BACKUP_REMINDER, `${label}: no reminder as the app opens`);
       assert.equal(gearMarked(app), false, `${label}: the gear is not marked as the app opens`);
-      await synced(app);
+      // The home screen has no Sync status: wait until the progress is on the server.
+      await eventually(async () => (await c.stored()).progress, 3000, `${label}: never synced`);
+      await sleep(30);
       assert.doesNotMatch(app.text('main'), BACKUP_REMINDER, `${label}: no reminder after the sync`);
       assert.equal(gearMarked(app), false, `${label}: the gear is not marked after the sync`);
       assert.equal(app.$('header a[href="#/settings"]').getAttribute('aria-label'), 'Настройки', label);
