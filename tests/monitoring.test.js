@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { JSDOM } = require('jsdom');
+const { shareMutationState } = require('./helpers/dom');
 
 const ROOT = path.join(__dirname, '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -17,6 +18,7 @@ function sentryOptions(t, url) {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url, runScripts: 'outside-only' });
   t.after(() => dom.window.close());
   const w = dom.window;
+  shareMutationState(w);
   w.eval(read('js/monitoring.js'));
   assert.equal(typeof w.sentryOnLoad, 'function', 'js/monitoring.js defines window.sentryOnLoad');
 
