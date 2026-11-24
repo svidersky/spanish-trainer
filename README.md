@@ -26,10 +26,12 @@ Every phrase has a pre-made mp3 in [audio/](audio), listed in [data/audio.js](da
 
 Recordings are synthesized offline with [Piper](https://github.com/OHF-Voice/piper1-gpl):
 
-| Speaker | Piper voice | Training data |
-|---|---|---|
-| `m` | `es_ES-davefx-medium` | [OHF voice datasets](https://github.com/OHF-Voice/voice-datasets), CC0; base voice `rdh` (CC0). Listed by Piper as commercial-use clean. |
-| `f` | `es_ES-sharvard-medium`, speaker 1 | [Sharvard corpus](https://datashare.ed.ac.uk/handle/10283/574) (Aubanel, García Lecumberri, Cooke; University of Edinburgh), [CC BY 3.0](http://creativecommons.org/licenses/by/3.0/); base voice `hifi_tts_92`. |
+| Speaker | Piper voice |
+|---|---|
+| `m` | `es_ES-sharvard-medium`, speaker 0 ("M") |
+| `f` | `es_ES-sharvard-medium`, speaker 1 ("F") |
+
+**Voice credit:** the `es_ES-sharvard-medium` voice was trained on the [Sharvard corpus](https://datashare.ed.ac.uk/handle/10283/574) (Aubanel, García Lecumberri, Cooke; University of Edinburgh), licensed [CC BY 3.0](http://creativecommons.org/licenses/by/3.0/), and fine-tuned from Piper's `hifi_tts_92` base voice.
 
 Only the generated mp3 files are in this repository; the Piper engine (GPL-3.0) and the voice models are not.
 
@@ -40,7 +42,7 @@ You need Python 3.11–3.14 (onnxruntime has no wheels for newer versions yet) a
 ```
 python -m venv .venv-piper
 .venv-piper/Scripts/python -m pip install -r tools/requirements.txt
-.venv-piper/Scripts/python -m piper.download_voices --data-dir <voices-dir> es_ES-davefx-medium es_ES-sharvard-medium
+.venv-piper/Scripts/python -m piper.download_voices --data-dir <voices-dir> es_ES-sharvard-medium
 .venv-piper/Scripts/python tools/generate_audio.py --voices-dir <voices-dir>
 ```
 

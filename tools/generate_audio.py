@@ -28,7 +28,7 @@ MANIFEST_PREFIX = "window.AUDIO = "
 
 # speaker -> (Piper voice, speaker id inside a multi-speaker voice)
 VOICES = {
-    "m": ("es_ES-davefx-medium", None),
+    "m": ("es_ES-sharvard-medium", 0),  # sharvard speaker 0 = "M"
     "f": ("es_ES-sharvard-medium", 1),  # sharvard speaker 1 = "F"
 }
 
@@ -83,7 +83,7 @@ def main():
     for p in phrases:
         voice_name, speaker_id = VOICES[p["speaker"]]
         file = f"audio/{p['id']}.mp3"
-        entry = {"text": p["es"], "voice": voice_name, "speaker": p["speaker"], "file": file}
+        entry = {"text": p["es"], "voice": voice_name, "voiceSpeakerId": speaker_id, "speaker": p["speaker"], "file": file}
         entries[p["id"]] = entry
         if not args.force and old.get(p["id"]) == entry and (ROOT / file).exists():
             continue
