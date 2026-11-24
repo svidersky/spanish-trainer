@@ -183,7 +183,8 @@ test('sync: answers from two devices are merged, not overwritten', async t => {
     return cards && cards['l01-01|recog'].reps === 1 && cards['l01-02|recog'].reps === 1 ? cards : null;
   };
   let cards = null;
-  for (let i = 0; i < 150 && !cards; i++) {
+  // Up to ~8 s: two devices saving at once may need a few randomized retries.
+  for (let i = 0; i < 400 && !cards; i++) {
     cards = await merged();
     if (!cards) await new Promise(r => setTimeout(r, 20));
   }

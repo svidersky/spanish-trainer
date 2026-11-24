@@ -11,7 +11,8 @@
   const DEFAULT_URL = 'https://spanish-progress.REPLACE_WITH_SUBDOMAIN.workers.dev';
   const NAME_RE = /^[\p{L}\p{N}_-]{2,32}$/u;
   const PIN_RE = /^\d{4}$/;
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 5;
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   const url = () => String(root.SYNC_URL || DEFAULT_URL).replace(/\/$/, '');
   // Until the Worker's address is filled in, Sync stays switched off and the app works as before.
@@ -90,8 +91,13 @@
         }
         if (saved.status !== 409) return failed(saved);
         ({ progress: remote, version } = saved.data);
+        // Another device saved in between. Wait a random moment so two devices saving at the
+        // same time do not keep beating each other in lockstep.
+        await sleep(50 + Math.random() * 250);
       }
       setStatus({ state: 'error', code: 409 });
+      // Still conflicting: try again a little later instead of leaving the change unsent.
+      setTimeout(syncNow, 1000 + Math.random() * 2000);
       return false;
     } catch (err) {
       setStatus({ state: 'offline' });
