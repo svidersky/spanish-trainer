@@ -82,7 +82,7 @@ const gear = app => app.$('header a[href="#/settings"]');
 
 test('settings: a gear link in the header opens the settings page from every screen', async t => {
   for (const hash of ['#/', '#/settings', '#/lesson/1', '#/review', '#/practice']) {
-    const app = setup(t, { hash, progress: lessonOneProgress() });
+    const app = setup(t, { hash, progress: lessonOneProgress({ lastExport: START - DAY }) });
     const link = gear(app);
     assert.ok(link, hash);
     assert.equal(link.getAttribute('aria-label'), 'Настройки', hash);
@@ -103,7 +103,7 @@ test('settings: the page holds the backup, the settings and the voice; a link le
   assert.ok(app.$('main input[type=file]'));
   assert.ok(app.$('main input[aria-label="Длительность сессии в минутах"]'));
   assert.ok(app.$('main input[aria-label="Число карточек в тренировке"]'));
-  assert.match(app.text('main'), /Последнее сохранение в файл/);
+  assert.match(app.text('main'), /Последнее сохранение: /);
   assert.match(app.text('main'), /Голос: Test Voice/);
   assert.ok(app.$('main a[href="#/"]'), 'a way back home');
   assert.equal(app.$('main .lessons'), null, 'no Lesson list here');
