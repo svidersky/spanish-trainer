@@ -48,10 +48,10 @@
     return h('div', { class: 'line' }, h('span', { class: 'es', lang: 'es' }, p.es), ' ', transcription(p));
   }
 
-  function playButtons(text) {
+  function playButtons(p) {
     return [
-      h('button', { class: 'icon', title: 'Слушать', 'aria-label': 'Слушать', onclick: () => Speech.speak(text) }, '▶'),
-      h('button', { class: 'icon', title: 'Медленно', 'aria-label': 'Слушать медленно', onclick: () => Speech.speak(text, { rate: 0.6 }) }, '🐢'),
+      h('button', { class: 'icon', title: 'Слушать', 'aria-label': 'Слушать', onclick: () => Speech.say(p) }, '▶'),
+      h('button', { class: 'icon', title: 'Медленно', 'aria-label': 'Слушать медленно', onclick: () => Speech.say(p, { slow: true }) }, '🐢'),
     ];
   }
 
@@ -201,7 +201,12 @@
       : null;
 
     const voiceStatus = h('p', { class: 'muted' });
-    const updateVoice = () => voiceStatus.replaceChildren(...voiceInfo());
+    const updateVoice = () => voiceStatus.replaceChildren(
+      ...(Speech.hasRecordings()
+        ? ['Фразы озвучены заранее записанными голосами. Для новых фраз без записи — голос браузера. ']
+        : []),
+      ...voiceInfo(),
+    );
     updateVoice();
     const off = Speech.onChange(updateVoice);
     cleanup = off;
@@ -306,7 +311,7 @@
       h('li', { class: 'phrase' },
         esLine(p),
         h('div', { class: 'ru' }, p.ru),
-        h('div', { class: 'actions' }, playButtons(p.es)),
+        h('div', { class: 'actions' }, playButtons(p)),
       ));
     const dialog = h('ol', { class: 'dialog' }, items);
 
@@ -331,7 +336,7 @@
         items[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         status.textContent = 'Слушайте…';
         const t0 = performance.now();
-        await Speech.speak(lesson.phrases[i].es);
+        await Speech.say(lesson.phrases[i]);
         if (my !== runId) return;
         const spoken = performance.now() - t0;
         status.textContent = 'Повторите вслух…';
@@ -370,7 +375,7 @@
       h('h1', null, `Урок ${lesson.n}. `, h('span', { lang: 'es' }, lesson.title)),
       h('p', { class: 'sub' }, lesson.ru),
       h('div', { class: 'player' }, h('div', { class: 'row' }, playBtn), status),
-      ...(Speech.supported && !Speech.voice() ? [h('div', null, voiceInfo())] : []),
+      ...(Speech.supported && !Speech.voice() && !Speech.hasRecordings() ? [h('div', null, voiceInfo())] : []),
       dialog,
       ...(lesson.notes && lesson.notes.length
         ? [h('h2', null, 'Пояснения'), h('ul', { class: 'notes' }, lesson.notes.map(n => h('li', null, n)))]
@@ -454,12 +459,12 @@
       if (dir === 'recog') {
         card.append(
           h('div', { class: 'prompt es', lang: 'es' }, p.es),
-          h('div', { class: 'row' }, playButtons(p.es)),
+          h('div', { class: 'row' }, playButtons(p)),
         );
         const showBtn = h('button', { class: 'primary', onclick: reveal }, 'Показать ответ');
         const controls = h('div', { class: 'controls' }, showBtn, h('div', { class: 'hint' }, 'Вспомните перевод в уме или вслух. Пробел — показать ответ.'));
         card.append(controls);
-        Speech.speak(p.es);
+        Speech.say(p);
         showBtn.focus();
         onKey = e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); reveal(); } };
 
@@ -490,7 +495,7 @@
           accents.remove();
           controls.remove();
           card.append(diffBlock(input.value, p.es), answerBlock(p), gradeBar(key));
-          Speech.speak(p.es);
+          Speech.say(p);
         }
       }
     }
@@ -549,7 +554,7 @@
 
   function answerBlock(p) {
     return h('div', { class: 'answer-block' },
-      h('div', { class: 'row' }, esLine(p), playButtons(p.es)),
+      h('div', { class: 'row' }, esLine(p), playButtons(p)),
       h('div', { class: 'ru' }, p.ru),
     );
   }

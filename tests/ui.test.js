@@ -80,8 +80,30 @@ test('no screen renders "null", "undefined" or "[object …]"', async t => {
   assert.doesNotMatch(noVoice.text('main'), /\bnull\b|\bundefined\b|\[object /);
 });
 
-test('lesson: ▶ and 🐢 speak the phrase at normal and slow speed', t => {
+test('lesson: ▶ and 🐢 play the Recording at normal and slow speed', t => {
   const app = setup(t, { hash: '#/lesson/1' });
+  const first = app.$('.phrase');
+  first.querySelector('button[title="Слушать"]').click();
+  assert.match(app.played.at(-1).src, /\/audio\/l01-01\.mp3$/);
+  assert.equal(app.played.at(-1).rate, 1);
+  first.querySelector('button[title="Медленно"]').click();
+  assert.ok(app.played.at(-1).rate < 1);
+  assert.equal(app.spoken.length, 0, 'the browser voice is not used when a Recording exists');
+});
+
+test('lesson: each speaker plays their own Recording', t => {
+  const app = setup(t, { hash: '#/lesson/1' });
+  const [first, second] = app.$$('.phrase');
+  first.querySelector('button[title="Слушать"]').click();
+  second.querySelector('button[title="Слушать"]').click();
+  assert.match(app.played[0].src, /l01-01\.mp3$/);
+  assert.match(app.played[1].src, /l01-02\.mp3$/);
+  assert.equal(app.window.AUDIO['l01-01'].speaker, 'm');
+  assert.equal(app.window.AUDIO['l01-02'].speaker, 'f');
+});
+
+test('speech: without Recordings ▶ and 🐢 use the browser voice', t => {
+  const app = setup(t, { hash: '#/lesson/1', recordings: false });
   const first = app.$('.phrase');
   first.querySelector('button[title="Слушать"]').click();
   assert.equal(app.spoken.at(-1).text, '¡Hola! ¿Qué tal?');
@@ -89,13 +111,29 @@ test('lesson: ▶ and 🐢 speak the phrase at normal and slow speed', t => {
   first.querySelector('button[title="Медленно"]').click();
   assert.ok(app.spoken.at(-1).rate < normal);
   assert.equal(app.spoken.at(-1).voice.lang, 'es-ES');
+  assert.equal(app.played.length, 0);
+});
+
+test('speech: a stale Recording (text changed) is not played', t => {
+  const app = setup(t, { hash: '#/lesson/1' });
+  app.window.AUDIO['l01-01'].text = 'old text';
+  app.$('.phrase button[title="Слушать"]').click();
+  assert.equal(app.played.length, 0);
+  assert.equal(app.spoken.at(-1).text, '¡Hola! ¿Qué tal?');
+});
+
+test('speech: if a Recording cannot play, the browser voice takes over', async t => {
+  const app = setup(t, { hash: '#/lesson/1', audioFails: true });
+  app.$('.phrase button[title="Слушать"]').click();
+  await app.waitFor(() => app.spoken.length === 1);
+  assert.equal(app.spoken[0].text, '¡Hola! ¿Qué tal?');
 });
 
 test('lesson: "listen and repeat" plays phrases in order and can be stopped', async t => {
   const app = setup(t, { hash: '#/lesson/1' });
   const play = app.byText('.player button', 'Слушать и повторять');
   play.click();
-  assert.equal(app.spoken.at(-1).text, '¡Hola! ¿Qué tal?');
+  assert.match(app.played.at(-1).src, /l01-01\.mp3$/);
   assert.ok(app.$('.phrase.playing'));
   await app.waitFor(() => /Повторите вслух/.test(app.text('.status')));
   play.click(); // now it is the stop button
@@ -145,7 +183,7 @@ test('session: Recognition first; answer and Transcription hidden until revealed
   assert.equal(app.text('.card .prompt'), '¡Hola! ¿Qué tal?');
   assert.equal(app.$('.card .tr'), null);
   assert.equal(app.$('.card .grades'), null);
-  assert.equal(app.spoken.at(-1).text, '¡Hola! ¿Qué tal?', 'the phrase is spoken when shown');
+  assert.match(app.played.at(-1).src, /l01-01\.mp3$/, 'the phrase is played when shown');
   app.key(' ');
   assert.ok(app.$('.card .tr'));
   assert.ok(app.$('.card .grades'));

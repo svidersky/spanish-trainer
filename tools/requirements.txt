@@ -1,0 +1,3 @@
+# Only for tools/generate_audio.py, not needed to run the app or the tests.
+# piper-tts depends on onnxruntime, whose wheels exist for CPython 3.11–3.14 (checked on PyPI).
+piper-tts==1.8.0

@@ -48,6 +48,27 @@ test('phrase ids are unique and follow lNN-NN of their own lesson', () => {
   }
 });
 
+test('every phrase has a speaker: m or f', () => {
+  for (const p of PHRASES) assert.match(p.speaker || '', /^[mf]$/, `${p.id}: speaker`);
+});
+
+test('every phrase has an up-to-date Recording (else run tools/generate_audio.py)', () => {
+  const actx = { window: {} };
+  vm.runInNewContext(read('data/audio.js'), actx);
+  const audio = JSON.parse(JSON.stringify(actx.window.AUDIO));
+  const fs = require('node:fs');
+  const path = require('node:path');
+  for (const p of PHRASES) {
+    const rec = audio[p.id];
+    assert.ok(rec, `${p.id}: no Recording`);
+    assert.equal(rec.text, p.es, `${p.id}: Recording was made from different text`);
+    assert.equal(rec.speaker, p.speaker, `${p.id}: Recording has a different speaker`);
+    assert.ok(fs.existsSync(path.join(__dirname, '..', rec.file)), `${p.id}: ${rec.file} is missing`);
+  }
+  const ids = new Set(PHRASES.map(p => p.id));
+  for (const id of Object.keys(audio)) assert.ok(ids.has(id), `Recording for unknown phrase ${id}`);
+});
+
 test('every phrase has Spanish text, a Transcription and a translation', () => {
   for (const p of PHRASES) {
     for (const k of ['es', 'tr', 'ru']) {

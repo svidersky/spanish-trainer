@@ -21,6 +21,12 @@ One time-boxed practice run over the Deck (15 minutes by default). The Cards tha
 **Phrase** («Фраза»)
 A unit of learning material: the Spanish text, its Transcription, the Russian translation, and es-ES audio. Cards are built from Phrases.
 
+**Speaker**
+Which of the two dialogue roles says a Phrase: male (*m*) or female (*f*). It decides the voice of the Phrase's Recording and must agree with the Phrase's grammar (*encantado* vs *encantada*).
+
+**Recording**
+A pre-made audio file of a Phrase, synthesized offline in the Speaker's voice. A Recording belongs to the exact text it was made from; when the Phrase's text changes, the old Recording is no longer used. Without a usable Recording, the browser's own voice speaks the Phrase.
+
 **Transcription** («Транскрипция»)
 The pronunciation of a Spanish Phrase written in Russian (Cyrillic) letters, with the stressed vowel marked. It is shown in parentheses right after the Spanish text: «¿Dónde está el baño? (до́ндэ эста́ эль ба́ньо?)». In a Lesson the Transcription is always visible. On a Card of either direction it appears only after the Answer, together with the correct text.
 

@@ -6,7 +6,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 
 const ROOT = path.join(__dirname, '..', '..');
 const KEY = 'spanish-trainer:v1';
-const SCRIPTS = ['data/lessons.js', 'js/srs.js', 'js/diff.js', 'js/storage.js', 'js/speech.js', 'js/app.js'];
+const SCRIPTS = ['data/lessons.js', 'data/audio.js', 'js/srs.js', 'js/diff.js', 'js/storage.js', 'js/speech.js', 'js/app.js'];
 const START = new Date(2026, 10, 23, 18, 30).getTime();
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -21,6 +21,8 @@ function boot({
   speech = true,
   userAgent,
   maxTouchPoints = 0,
+  recordings = true,
+  audioFails = false,
 } = {}) {
   const errors = [];
   const virtualConsole = new VirtualConsole();
@@ -64,6 +66,16 @@ function boot({
     w.SpeechSynthesisUtterance = function (text) { this.text = text; };
   }
 
+  // jsdom does not play media: record what would play, then end (or fail) asynchronously.
+  const played = [];
+  w.HTMLMediaElement.prototype.play = function () {
+    if (audioFails) return Promise.reject(new w.DOMException('blocked', 'NotAllowedError'));
+    played.push({ src: this.src, rate: this.playbackRate });
+    w.setTimeout(() => this.onended && this.onended(), 0);
+    return Promise.resolve();
+  };
+  w.HTMLMediaElement.prototype.pause = function () {};
+
   const alerts = [];
   let confirmAnswer = true;
   w.alert = m => alerts.push(String(m));
@@ -73,7 +85,10 @@ function boot({
   w.URL.createObjectURL = () => 'blob:test';
   w.URL.revokeObjectURL = () => {};
 
-  for (const f of SCRIPTS) w.eval(read(f));
+  for (const f of SCRIPTS) {
+    if (f === 'data/audio.js' && !recordings) continue;
+    w.eval(read(f));
+  }
 
   const $ = s => w.document.querySelector(s);
   const $$ = s => Array.from(w.document.querySelectorAll(s));
@@ -82,6 +97,7 @@ function boot({
     window: w,
     document: w.document,
     spoken,
+    played,
     alerts,
     errors,
     $,
