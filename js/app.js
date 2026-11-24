@@ -186,11 +186,13 @@
 
   // ---------- backup reminder ----------
 
-  // Whether the progress needs a file copy: false if not (empty Deck, or exported less than a
-  // week ago), otherwise the whole days since the last export (null if never exported).
+  // Whether the progress needs a file copy: false if not (empty Deck, a Profile keeps it on the
+  // Sync server, or exported less than a week ago), otherwise the whole days since the last
+  // export (null if never exported).
   function backupDue(now) {
     const st = Store.get();
     if (stats(now).total === 0) return false;
+    if (window.Sync && Sync.profile()) return false;
     if (!st.lastExport) return null;
     const days = Math.floor((now - st.lastExport) / SRS.DAY);
     return days >= 7 ? days : false;
@@ -322,6 +324,18 @@
     Sync.onData(() => {
       const parts = routeParts();
       if (!parts.length || parts[0] === 'settings') route();
+    });
+
+    // When a Profile appears or goes away, the file backup reminder does too: re-draw the home
+    // screen or the settings page, and refresh the gear's mark everywhere else.
+    let hadProfile = !!Sync.profile();
+    Sync.onStatus(() => {
+      const hasProfile = !!Sync.profile();
+      if (hasProfile === hadProfile) return;
+      hadProfile = hasProfile;
+      const parts = routeParts();
+      if (!parts.length || parts[0] === 'settings') route();
+      else applyLanguage();
     });
   }
 
