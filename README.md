@@ -24,7 +24,7 @@ Progress is stored per device and browser. To move it, export it to a file on on
 
 On the home screen, enter a name and a 4-digit PIN (the same on every device). Progress then syncs automatically: when the app opens and a couple of seconds after every answer. The first sync with a new name creates its Profile; after 5 wrong PINs the name is locked for an hour.
 
-The Sync server is a Cloudflare Worker in [worker/](worker) with one Workers KV namespace (free plan). It stores each Profile's progress with a salted SHA-256 of the PIN and a version number; the app merges ([js/merge.js](js/merge.js)) and saves with the version it started from, so two devices never overwrite each other. [.github/workflows/deploy-worker.yml](.github/workflows/deploy-worker.yml) deploys it on every change to `worker/` on `main`, using the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+The Sync server is a Cloudflare Worker in [worker/](worker) with one SQLite-backed Durable Object per Profile (free plan). The object stores the Profile's progress with a salted SHA-256 of the PIN and a version number, and handles its requests strictly one at a time. The app merges ([js/merge.js](js/merge.js)) and saves with the version it started from; a save based on an old version gets the current copy back to merge, so two devices never overwrite each other, even when they save at the same moment. [.github/workflows/deploy-worker.yml](.github/workflows/deploy-worker.yml) deploys it on every change to `worker/` on `main`, using the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 
 A 4-digit PIN is a convenience, not strong security: anyone who knows the name can try PINs, slowed down by the lockout. Do not reuse a PIN from anything important.
 
