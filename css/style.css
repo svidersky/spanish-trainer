@@ -155,6 +155,12 @@ button:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px sol
   width: 100%; font: inherit; font-size: 20px; padding: 10px 12px; border-radius: 10px;
   border: 1px solid var(--border); background: var(--bg); color: var(--text);
 }
+/* Sync: a name and a 4-digit PIN need little room; on a wide screen they sit in one line with the button. */
+.sync-form input[name="sync-name"] { flex: 1 1 180px; max-width: 260px; width: auto; }
+.sync-form input[name="sync-pin"] { flex: 0 0 110px; width: 110px; }
+@media (max-width: 520px) {
+  .sync-form input[name="sync-name"] { max-width: none; }
+}
 .accents { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .accents .key { padding: 4px 10px; min-width: 38px; justify-content: center; }
 
