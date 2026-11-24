@@ -1,11 +1,11 @@
 # Spanish Trainer
 
-A personal Spanish trainer (Spain variant, es-ES) for a Russian-speaking learner. It is plain HTML files: no server, nothing to install.
+A personal Spanish trainer (Spain variant, es-ES) for a Russian- or English-speaking learner. It is plain HTML files: no server, nothing to install.
 
-- **Assimil-style lessons.** Short dialogues with the Spanish and the Russian side by side, and a Russian-letter transcription for every phrase. The browser's voice speaks each phrase, then pauses so you can repeat it aloud.
+- **Assimil-style lessons.** Short dialogues with the Spanish and the translation side by side, and a transcription in the learner's own letters for every phrase. The browser's voice speaks each phrase, then pauses so you can repeat it aloud.
 - **Flashcards with spaced repetition (SM-2, as in Anki).** A completed lesson adds its phrases to the deck. Every phrase becomes two cards: Recognition (ES → RU, answer in your head) and Production (RU → ES, type the answer; the trainer highlights the differences).
 
-The project's terms are defined in [CONTEXT.md](CONTEXT.md). The learner-facing interface and lesson content are in Russian; everything else in the repository is in English.
+The project's terms are defined in [CONTEXT.md](CONTEXT.md). The learner-facing interface and lesson content are in Russian by default and can be switched to English in the header (strings in `js/i18n.js`, lesson content in `data/lessons.js`); everything else in the repository is in English.
 
 ## Running it
 

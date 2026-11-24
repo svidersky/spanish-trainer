@@ -1,16 +1,14 @@
 // Trainer screens: home, Lesson, review Session and Practice.
-// UI strings are learner-facing and therefore Russian.
+// Learner-facing strings come from js/i18n.js in the chosen interface language (Russian or English).
 (function () {
   'use strict';
 
   const $app = document.getElementById('app');
   const LESSONS = window.LESSONS || [];
   const DIRS = ['recog', 'produce'];
-  const DIR_LABEL = {
-    recog: 'Узнавание · ES → RU',
-    produce: 'Воспроизведение · RU → ES',
-  };
-  const GRADE_LABEL = { again: 'Забыл', hard: 'Трудно', good: 'Нормально', easy: 'Легко' };
+  const t = I18n.t;
+  const DIR_KEY = { recog: 'dirRecog', produce: 'dirProduce' };
+  const GRADE_KEY = { again: 'gradeAgain', hard: 'gradeHard', good: 'gradeGood', easy: 'gradeEasy' };
 
   // Phrase id -> { phrase, lesson, order }
   const phraseIndex = new Map();
@@ -40,8 +38,17 @@
     return text.replace(/([аеёиоуыэюяАЕЁИОУЫЭЮЯ])'/g, '$1́');
   }
 
+  // Lesson content in the interface language: the translation, the Transcription, notes.
+  const english = () => I18n.lang() === 'en';
+  const translation = x => (english() ? x.en : x.ru);
+  const notesOf = lesson => (english() ? lesson.notesEn : lesson.notes);
+
+  function translationEl(p, cls) {
+    return h('div', { class: cls, lang: I18n.lang() }, translation(p));
+  }
+
   function transcription(p) {
-    return h('span', { class: 'tr', lang: 'ru' }, '(' + stress(p.tr) + ')');
+    return h('span', { class: 'tr', lang: I18n.lang() }, '(' + (english() ? p.trEn : stress(p.tr)) + ')');
   }
 
   function esLine(p) {
@@ -50,8 +57,8 @@
 
   function playButtons(p) {
     return [
-      h('button', { class: 'icon', title: 'Слушать', 'aria-label': 'Слушать', onclick: () => Speech.say(p) }, '▶'),
-      h('button', { class: 'icon', title: 'Медленно', 'aria-label': 'Слушать медленно', onclick: () => Speech.say(p, { slow: true }) }, '🐢'),
+      h('button', { class: 'icon', title: t('listen'), 'aria-label': t('listen'), onclick: () => Speech.say(p) }, '▶'),
+      h('button', { class: 'icon', title: t('slow'), 'aria-label': t('listenSlow'), onclick: () => Speech.say(p, { slow: true }) }, '🐢'),
     ];
   }
 
@@ -59,18 +66,10 @@
   const cardKey = (phraseId, dir) => phraseId + '|' + dir;
   const parseKey = key => { const [id, dir] = key.split('|'); return { id, dir }; };
 
-  function plural(n, one, few, many) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11) return one;
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-    return many;
-  }
-
   function fmtInterval(days) {
-    if (days < 31) return days + ' ' + plural(days, 'день', 'дня', 'дней');
-    if (days < 365) { const m = Math.round(days / 30); return '≈' + m + ' мес'; }
-    const y = Math.round(days / 36.5) / 10;
-    return '≈' + y + ' г';
+    if (days < 31) return I18n.days(days);
+    if (days < 365) return t('months', Math.round(days / 30));
+    return t('years', Math.round(days / 36.5) / 10);
   }
 
   function fmtClock(ms) {
@@ -130,7 +129,7 @@
 
   function saveOrWarn() {
     if (!Store.save()) {
-      alert('Браузер не дал сохранить прогресс. Сделайте экспорт в файл, чтобы ничего не потерять.');
+      alert(t('saveFailed'));
     }
   }
 
@@ -143,6 +142,7 @@
 
   function route() {
     if (cleanup) { cleanup(); cleanup = null; }
+    applyLanguage();
     Speech.stop();
     const parts = routeParts();
     $app.replaceChildren();
@@ -155,6 +155,28 @@
 
   window.addEventListener('hashchange', route);
 
+  // ---------- interface language ----------
+
+  const $brand = document.querySelector('header .brand span');
+  const $lang = h('select', {
+    class: 'lang', name: 'lang',
+    onchange: e => {
+      Store.setSetting('lang', e.target.value);
+      saveOrWarn();
+      route();
+    },
+  }, I18n.LANGS.map(l => h('option', { value: l, lang: l }, I18n.NAMES[l])));
+  document.querySelector('header .top-inner').append($lang);
+
+  // The parts outside the screens: the page language, the brand and the dropdown.
+  function applyLanguage() {
+    document.documentElement.lang = I18n.lang();
+    if ($brand) $brand.textContent = t('appTitle');
+    $lang.value = I18n.lang();
+    $lang.setAttribute('aria-label', t('langLabel'));
+    $lang.title = t('langLabel');
+  }
+
   // ---------- home ----------
 
   function renderHome() {
@@ -162,22 +184,22 @@
     const now = Date.now();
     const s = stats(now);
 
-    document.title = 'Испанский тренажёр';
+    document.title = t('appTitle');
 
     const reviewPanel = h('section', { class: 'panel' },
       h('div', { class: 'stats' },
-        h('div', { class: 'stat' }, h('b', null, s.due), h('span', null, 'к повторению')),
-        h('div', { class: 'stat' }, h('b', null, s.learned), h('span', null, 'выучено')),
-        h('div', { class: 'stat' }, h('b', null, s.total), h('span', null, 'карточек в колоде')),
+        h('div', { class: 'stat' }, h('b', null, s.due), h('span', null, t('statDue'))),
+        h('div', { class: 'stat' }, h('b', null, s.learned), h('span', null, t('statLearned'))),
+        h('div', { class: 'stat' }, h('b', null, s.total), h('span', null, t('statTotal'))),
       ),
       s.total === 0
-        ? h('p', { class: 'muted' }, 'Колода пока пуста. Пройдите первый урок и отметьте его пройденным — его фразы появятся здесь.')
+        ? h('p', { class: 'muted' }, t('deckEmpty'))
         : s.due === 0
-          ? h('p', { class: 'muted' }, 'На сегодня всё повторено. ¡Muy bien!')
-          : h('a', { class: 'btn primary', href: '#/review' }, `Начать сессию · ${st.settings.sessionMinutes} мин`),
+          ? h('p', { class: 'muted' }, t('allReviewedToday'))
+          : h('a', { class: 'btn primary', href: '#/review' }, t('startSession', st.settings.sessionMinutes)),
       s.notLearned > 0
         ? h('p', null, h('a', { class: 'btn', href: '#/practice' },
-            `Потренировать невыученные · ${Math.min(s.notLearned, st.settings.practiceCards)}`))
+            t('startPractice', Math.min(s.notLearned, st.settings.practiceCards))))
         : null,
     );
 
@@ -187,8 +209,8 @@
         return h('li', { class: done ? 'done' : null },
           h('a', { href: '#/lesson/' + l.n },
             h('span', { class: 'num' }, done ? '✓' : l.n),
-            h('span', { class: 't' }, h('span', { class: 'es', lang: 'es' }, l.title), h('i', null, l.ru)),
-            done ? h('span', { class: 'badge' }, 'пройден') : null,
+            h('span', { class: 't' }, h('span', { class: 'es', lang: 'es' }, l.title), h('i', { lang: I18n.lang() }, translation(l))),
+            done ? h('span', { class: 'badge' }, t('completedBadge')) : null,
           ));
       }),
     );
@@ -206,8 +228,8 @@
         route();
       },
     });
-    const minutes = numberSetting('sessionMinutes', 1, 120, 15, 'Длительность сессии в минутах');
-    const practiceSize = numberSetting('practiceCards', 1, 200, 20, 'Число карточек в тренировке');
+    const minutes = numberSetting('sessionMinutes', 1, 120, 15, t('sessionMinutesLabel'));
+    const practiceSize = numberSetting('practiceCards', 1, 200, 20, t('practiceCardsLabel'));
 
     const fileInput = h('input', { type: 'file', accept: '.json,application/json', hidden: true, onchange: importProgress });
 
@@ -215,14 +237,14 @@
     const exportReminder = s.total > 0 && (daysSinceExport === null || daysSinceExport >= 7)
       ? h('div', { class: 'warn' },
           daysSinceExport === null
-            ? 'Прогресс ещё ни разу не сохранялся в файл. Если очистить данные браузера, он пропадёт.'
-            : `Последнее сохранение в файл было ${daysSinceExport} ${plural(daysSinceExport, 'день', 'дня', 'дней')} назад.`)
+            ? t('neverExported')
+            : t('exportedAgo', I18n.days(daysSinceExport)))
       : null;
 
     const voiceStatus = h('p', { class: 'muted' });
     const updateVoice = () => voiceStatus.replaceChildren(
       ...(Speech.hasRecordings()
-        ? ['Фразы озвучены заранее записанными голосами. Для новых фраз без записи — голос браузера. ']
+        ? [t('recordingsInfo')]
         : []),
       ...voiceInfo(),
     );
@@ -232,27 +254,27 @@
     cleanup = () => { offVoice(); sync.off(); };
 
     $app.append(
-      h('h1', null, 'Учим испанский'),
-      h('p', { class: 'sub' }, 'Уроки в стиле Assimil и карточки с интервальным повторением.'),
+      h('h1', null, t('homeTitle')),
+      h('p', { class: 'sub' }, t('homeSub')),
       reviewPanel,
-      h('h2', null, 'Уроки'),
+      h('h2', null, t('lessons')),
       lessonList,
-      h('h2', null, 'Прогресс и настройки'),
+      h('h2', null, t('progressAndSettings')),
       ...(sync.el ? [sync.el] : []),
       h('section', { class: 'panel' },
         exportReminder,
         h('div', { class: 'row' },
-          h('button', { onclick: exportProgress }, '💾 Сохранить прогресс в файл'),
-          h('button', { onclick: () => fileInput.click() }, '📂 Загрузить из файла'),
+          h('button', { onclick: exportProgress }, t('exportButton')),
+          h('button', { onclick: () => fileInput.click() }, t('importButton')),
           fileInput,
         ),
         h('p', { class: 'muted' }, st.lastExport
-          ? 'Последнее сохранение: ' + new Date(st.lastExport).toLocaleString('ru-RU')
+          ? t('lastExport', new Date(st.lastExport).toLocaleString(I18n.locale()))
           : window.Sync && Sync.profile()
-            ? 'Файл — дополнительная копия: прогресс уже синхронизируется.'
-            : 'Прогресс хранится только в этом браузере.'),
-        h('div', { class: 'row' }, h('label', null, 'Длительность сессии, минут:'), minutes),
-        h('div', { class: 'row' }, h('label', null, 'Карточек в тренировке:'), practiceSize),
+            ? t('fileIsExtraCopy')
+            : t('onlyInBrowser')),
+        h('div', { class: 'row' }, h('label', null, t('sessionMinutesField')), minutes),
+        h('div', { class: 'row' }, h('label', null, t('practiceCardsField')), practiceSize),
         voiceStatus,
       ),
     );
@@ -270,13 +292,13 @@
 
   function syncStatusText(s) {
     switch (s.state) {
-      case 'syncing': return 'Синхронизация…';
-      case 'ok': return 'Синхронизировано в ' + new Date(s.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) + '.';
-      case 'wrong-pin': return 'Неверный PIN для этого имени.';
-      case 'locked': return `Слишком много попыток с неверным PIN. Попробуйте через ${s.minutes} мин.`;
-      case 'offline': return 'Нет связи с сервером. Синхронизируем, когда связь появится.';
-      case 'invalid': return s.field === 'pin' ? 'PIN — это 4 цифры.' : 'Имя: от 2 до 32 букв или цифр (можно «-» и «_»).';
-      case 'error': return `Не удалось синхронизировать (ошибка ${s.code}).`;
+      case 'syncing': return t('syncing');
+      case 'ok': return t('syncedAt', new Date(s.at).toLocaleTimeString(I18n.locale(), { hour: '2-digit', minute: '2-digit' }));
+      case 'wrong-pin': return t('wrongPin');
+      case 'locked': return t('locked', s.minutes);
+      case 'offline': return t('offline');
+      case 'invalid': return s.field === 'pin' ? t('invalidPin') : t('invalidName');
+      case 'error': return t('syncError', s.code);
       default: return '';
     }
   }
@@ -287,25 +309,25 @@
     const status = h('p', { class: 'sync-status', 'aria-live': 'polite' });
     const name = h('input', {
       name: 'sync-name', type: 'text', class: 'answer', autocomplete: 'username', autocapitalize: 'off',
-      spellcheck: 'false', placeholder: 'Имя', 'aria-label': 'Имя профиля',
+      spellcheck: 'false', placeholder: t('namePlaceholder'), 'aria-label': t('nameLabel'),
     });
     const pin = h('input', {
       name: 'sync-pin', type: 'password', class: 'answer', inputmode: 'numeric', maxlength: '4',
-      autocomplete: 'current-password', placeholder: 'PIN', 'aria-label': 'PIN из 4 цифр',
+      autocomplete: 'current-password', placeholder: 'PIN', 'aria-label': t('pinLabel'),
     });
     const connect = () => Sync.connect(name.value, pin.value);
     pin.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); connect(); } });
 
     const form = h('div', { class: 'sync-form' },
-      h('p', { class: 'muted' }, 'Введите имя и PIN из 4 цифр — одинаковые на всех ваших устройствах. Если такого имени ещё нет, оно будет создано с этим PIN.'),
-      h('div', { class: 'row' }, name, pin, h('button', { type: 'button', class: 'primary', onclick: connect }, 'Подключить')),
+      h('p', { class: 'muted' }, t('syncIntro')),
+      h('div', { class: 'row' }, name, pin, h('button', { type: 'button', class: 'primary', onclick: connect }, t('connect'))),
     );
     const profileName = h('b');
     const connected = h('div', null,
-      h('p', null, 'Профиль ', profileName, ': прогресс общий для всех устройств с этим именем и PIN.'),
+      h('p', null, t('profileBefore'), profileName, t('profileAfter')),
       h('div', { class: 'row' },
-        h('button', { type: 'button', onclick: () => Sync.syncNow() }, 'Синхронизировать сейчас'),
-        h('button', { type: 'button', onclick: () => Sync.disconnect() }, 'Отключить на этом устройстве'),
+        h('button', { type: 'button', onclick: () => Sync.syncNow() }, t('syncNow')),
+        h('button', { type: 'button', onclick: () => Sync.disconnect() }, t('disconnect')),
       ),
     );
 
@@ -319,28 +341,22 @@
     update();
     const off = Sync.onStatus(update);
 
-    const el = h('section', { class: 'panel sync' }, h('h3', null, 'Синхронизация между устройствами'), form, connected, status);
+    const el = h('section', { class: 'panel sync' }, h('h3', null, t('syncTitle')), form, connected, status);
     return { el, off };
   }
 
   function voiceInfo() {
-    if (!Speech.supported) return [h('span', { class: 'warn' }, 'Этот браузер не умеет озвучивать текст. Откройте тренажёр в Microsoft Edge или Chrome.')];
+    if (!Speech.supported) return [h('span', { class: 'warn' }, t('noSpeech'))];
     const v = Speech.voice();
-    if (v && Speech.isSpanishSpain()) return ['Голос: ' + v.name];
-    const how = VOICE_HELP[platform()];
-    if (v) return [h('div', { class: 'warn' }, `Голос для Испании не найден, использую «${v.name}». ${how}`)];
-    return [h('div', { class: 'warn' }, 'Испанский голос не найден. ' + how)];
+    if (v && Speech.isSpanishSpain()) return [t('voiceName', v.name)];
+    const how = t(VOICE_HELP[platform()]);
+    if (v) return [h('div', { class: 'warn' }, t('noSpainVoice', v.name, how))];
+    return [h('div', { class: 'warn' }, t('noSpanishVoice', how))];
   }
 
-  // Where to add a Spanish (Spain) voice. Menu paths follow the vendors' support pages:
-  // Apple iPhone User Guide "Hear iPhone speak the screen", Google Android Accessibility Help
-  // "Text-to-speech output", Microsoft Support "Download languages and voices for Immersive Reader".
+  // Where to add a Spanish (Spain) voice, by platform (the texts are in js/i18n.js).
   const VOICE_HELP = {
-    ios: 'На iPhone/iPad: Настройки → Универсальный доступ → чтение вслух (Read & Speak) → Голоса → Español → España. Звука не будет, если включён беззвучный режим.',
-    android: 'На Android: Настройки → Специальные возможности → Синтез речи (Text-to-speech output) → установить голосовые данные (Install voice data) → испанский (Испания).',
-    windows: 'В Windows: Параметры → Время и язык → Язык и регион → Добавить язык → Español (España) с отметкой «Преобразование текста в речь». Или откройте тренажёр в Microsoft Edge — там есть онлайн-голоса.',
-    mac: 'На Mac: добавьте испанский голос (Испания) в Системных настройках, раздел «Универсальный доступ». Или откройте тренажёр в Chrome.',
-    other: 'Установите испанский голос (Испания) в настройках синтеза речи вашей системы или откройте тренажёр в Microsoft Edge или Chrome.',
+    ios: 'voiceHelpIos', android: 'voiceHelpAndroid', windows: 'voiceHelpWindows', mac: 'voiceHelpMac', other: 'voiceHelpOther',
   };
 
   function platform() {
@@ -377,11 +393,11 @@
       let data;
       try { data = JSON.parse(reader.result); } catch (err) { data = null; }
       if (!Store.looksLikeProgress(data)) {
-        alert('Это не похоже на файл прогресса тренажёра.');
+        alert(t('notAProgressFile'));
         return;
       }
-      if (!confirm('Заменить текущий прогресс данными из файла?')) return;
-      if (!Store.replace(data)) alert('Браузер не дал сохранить прогресс.');
+      if (!confirm(t('confirmReplace'))) return;
+      if (!Store.replace(data)) alert(t('replaceFailed'));
       route();
     };
     reader.readAsText(file);
@@ -394,12 +410,12 @@
     if (idx < 0) { location.hash = '#/'; return; }
     const lesson = LESSONS[idx];
     const st = Store.get();
-    document.title = `Урок ${lesson.n}: ${lesson.title}`;
+    document.title = t('lessonTitle', lesson.n, lesson.title);
 
     const items = lesson.phrases.map(p =>
       h('li', { class: 'phrase' },
         esLine(p),
-        h('div', { class: 'ru' }, p.ru),
+        translationEl(p, 'ru'),
         h('div', { class: 'actions' }, playButtons(p)),
       ));
     const dialog = h('ol', { class: 'dialog' }, items);
@@ -407,12 +423,12 @@
     // Playback: Phrase → pause to repeat aloud → next Phrase.
     let runId = 0;
     const status = h('div', { class: 'status', 'aria-live': 'polite' });
-    const playBtn = h('button', { class: 'primary', onclick: () => (runId && playing ? stop() : playAll()) }, '▶ Слушать и повторять');
+    const playBtn = h('button', { class: 'primary', onclick: () => (runId && playing ? stop() : playAll()) }, t('listenAndRepeat'));
     let playing = false;
 
     function setPlaying(v) {
       playing = v;
-      playBtn.textContent = v ? '■ Остановить' : '▶ Слушать и повторять';
+      playBtn.textContent = v ? t('stop') : t('listenAndRepeat');
     }
 
     async function playAll() {
@@ -423,12 +439,12 @@
         items.forEach(li => li.classList.remove('playing'));
         items[i].classList.add('playing');
         items[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        status.textContent = 'Слушайте…';
+        status.textContent = t('listenNow');
         const t0 = performance.now();
         await Speech.say(lesson.phrases[i]);
         if (my !== runId) return;
         const spoken = performance.now() - t0;
-        status.textContent = 'Повторите вслух…';
+        status.textContent = t('repeatAloud');
         await sleep(Math.max(1800, spoken * 1.3));
       }
       if (my !== runId) return;
@@ -449,31 +465,31 @@
 
     const done = st.completedLessons.includes(lesson.n);
     const completion = done
-      ? h('p', { class: 'done-msg' }, '✓ Урок пройден — его фразы в колоде.')
+      ? h('p', { class: 'done-msg' }, t('lessonDone'))
       : h('div', null,
-          h('p', { class: 'muted' }, 'Когда прослушаете и повторите диалог несколько раз, отметьте урок пройденным: его фразы попадут в колоду карточек.'),
+          h('p', { class: 'muted' }, t('lessonDoneHint')),
           h('button', {
             class: 'primary',
             onclick: () => { completeLesson(lesson); route(); },
-          }, 'Отметить урок пройденным'));
+          }, t('markCompleted')));
 
     const prev = LESSONS[idx - 1], next = LESSONS[idx + 1];
 
     $app.append(
-      h('p', { class: 'muted' }, h('a', { href: '#/' }, '← Все уроки')),
-      h('h1', null, `Урок ${lesson.n}. `, h('span', { lang: 'es' }, lesson.title)),
-      h('p', { class: 'sub' }, lesson.ru),
+      h('p', { class: 'muted' }, h('a', { href: '#/' }, t('allLessons'))),
+      h('h1', null, t('lessonHeading', lesson.n), h('span', { lang: 'es' }, lesson.title)),
+      h('p', { class: 'sub', lang: I18n.lang() }, translation(lesson)),
       h('div', { class: 'player' }, h('div', { class: 'row' }, playBtn), status),
       ...(Speech.supported && !Speech.voice() && !Speech.hasRecordings() ? [h('div', null, voiceInfo())] : []),
       dialog,
-      ...(lesson.notes && lesson.notes.length
-        ? [h('h2', null, 'Пояснения'), h('ul', { class: 'notes' }, lesson.notes.map(n => h('li', null, n)))]
+      ...(notesOf(lesson) && notesOf(lesson).length
+        ? [h('h2', null, t('notes')), h('ul', { class: 'notes', lang: I18n.lang() }, notesOf(lesson).map(n => h('li', null, n)))]
         : []),
-      h('h2', null, 'Готово?'),
+      h('h2', null, t('ready')),
       completion,
       h('nav', { class: 'lesson-nav' },
-        prev ? h('a', { class: 'btn', href: '#/lesson/' + prev.n }, '← Урок ' + prev.n) : h('span'),
-        next ? h('a', { class: 'btn', href: '#/lesson/' + next.n }, 'Урок ' + next.n + ' →') : h('span'),
+        prev ? h('a', { class: 'btn', href: '#/lesson/' + prev.n }, t('prevLesson', prev.n)) : h('span'),
+        next ? h('a', { class: 'btn', href: '#/lesson/' + next.n }, t('nextLesson', next.n)) : h('span'),
       ),
     );
   }
@@ -487,14 +503,14 @@
     const queue = practice
       ? liveCards().filter(k => !SRS.isLearned(st.cards[k])).sort(practiceOrder).slice(0, st.settings.practiceCards)
       : liveCards().filter(k => SRS.isDue(st.cards[k], Date.now())).sort(queueOrder);
-    const title = practice ? 'Тренировка' : 'Повторение';
+    const title = practice ? t('practiceTitle') : t('reviewTitle');
     document.title = title;
 
     if (!queue.length) {
       $app.append(
         h('h1', null, title),
-        h('p', null, practice ? 'Тренировать нечего: все карточки выучены.' : 'Сейчас повторять нечего.'),
-        h('a', { class: 'btn', href: '#/' }, '← На главную'),
+        h('p', null, practice ? t('nothingToPractise') : t('nothingToReview')),
+        h('a', { class: 'btn', href: '#/' }, t('toHome')),
       );
       return;
     }
@@ -515,7 +531,7 @@
       if (left === 0 && !timeUp) {
         timeUp = true;
         timerEl.classList.add('over');
-        timerEl.textContent = 'время вышло — доделайте карточку';
+        timerEl.textContent = t('timeUp');
       }
     };
     const timer = practice ? null : setInterval(tick, 1000);
@@ -525,7 +541,7 @@
 
     $app.append(
       h('div', { class: 'session-bar' },
-        h('a', { href: '#/' }, '← Выйти'),
+        h('a', { href: '#/' }, t('exit')),
         leftEl,
         timerEl,
       ),
@@ -535,7 +551,7 @@
     next();
 
     function updateLeft() {
-      leftEl.textContent = 'осталось ' + queue.length + (practice ? ' · пройдено ' : ' · повторено ') + reviewed;
+      leftEl.textContent = t(practice ? 'leftPractice' : 'leftSession', queue.length, reviewed);
     }
 
     function next() {
@@ -547,7 +563,7 @@
     function showCard(key) {
       const { id, dir } = parseKey(key);
       const p = phraseIndex.get(id).phrase;
-      const card = h('div', { class: 'card' }, h('div', { class: 'dir' }, DIR_LABEL[dir]));
+      const card = h('div', { class: 'card' }, h('div', { class: 'dir' }, t(DIR_KEY[dir])));
       stage.replaceChildren(card);
 
       if (dir === 'recog') {
@@ -555,10 +571,10 @@
           h('div', { class: 'prompt es', lang: 'es' }, p.es),
           h('div', { class: 'row' }, playButtons(p)),
         );
-        const showBtn = h('button', { class: 'primary', onclick: reveal }, 'Показать ответ');
+        const showBtn = h('button', { class: 'primary', onclick: reveal }, t('showAnswer'));
         const controls = h('div', { class: 'controls' },
           h('div', { class: 'row' }, showBtn, dontKnowButton(giveUp)),
-          h('div', { class: 'hint' }, 'Вспомните перевод в уме или вслух.', kbdHint(' Пробел — показать ответ.')));
+          h('div', { class: 'hint' }, t('recallHint'), kbdHint(t('spaceHint'))));
         card.append(controls);
         Speech.say(p);
         showBtn.focus();
@@ -578,18 +594,18 @@
           Speech.say(p);
         }
       } else {
-        card.append(h('div', { class: 'prompt ru' }, p.ru));
+        card.append(translationEl(p, 'prompt ru'));
         const input = h('input', {
           type: 'text', class: 'answer', lang: 'es', autocomplete: 'off', autocapitalize: 'off',
-          spellcheck: 'false', placeholder: 'Напишите по-испански…', 'aria-label': 'Ваш ответ по-испански',
+          spellcheck: 'false', placeholder: t('typePlaceholder'), 'aria-label': t('typeLabel'),
         });
         const accents = h('div', { class: 'accents' },
           Array.from('áéíóúüñ¿¡').map(ch =>
             h('button', { type: 'button', class: 'key', onclick: () => insertAtCursor(input, ch) }, ch)));
-        const checkBtn = h('button', { class: 'primary', onclick: check }, 'Проверить');
+        const checkBtn = h('button', { class: 'primary', onclick: check }, t('check'));
         const controls = h('div', { class: 'controls' },
           h('div', { class: 'row' }, checkBtn, dontKnowButton(giveUp)),
-          h('div', { class: 'hint' }, kbdHint('Enter — проверить.')));
+          h('div', { class: 'hint' }, kbdHint(t('enterHint'))));
         card.append(input, accents, controls);
         input.focus();
         onKey = e => { if (e.key === 'Enter' && document.activeElement === input) { e.preventDefault(); check(); } };
@@ -624,11 +640,11 @@
       const bar = h('div', null,
         h('div', { class: 'grades' },
           SRS.GRADES.map((g, i) => {
-            const preview = counts(g) ? fmtInterval(SRS.review(card, g, now).interval) : 'срок не меняется';
+            const preview = counts(g) ? fmtInterval(SRS.review(card, g, now).interval) : t('scheduleUnchanged');
             return h('button', { class: g, onclick: () => safeGrade(g) },
-              GRADE_LABEL[g], h('small', null, kbdHint((i + 1) + ' · '), preview));
+              t(GRADE_KEY[g]), h('small', null, kbdHint((i + 1) + ' · '), preview));
           })),
-        h('div', { class: 'hint' }, 'Оцените себя честно.', kbdHint(' Клавиши 1–4.')),
+        h('div', { class: 'hint' }, t('gradeHint'), kbdHint(t('gradeKeysHint'))),
       );
       onKey = e => {
         const i = ['1', '2', '3', '4'].indexOf(e.key);
@@ -638,20 +654,19 @@
       return bar;
     }
 
-    // "Не знаю": the answer is shown and the Grade is "again" right away; one button moves on.
+    // "Don't know": the answer is shown and the Grade is "again" right away; one button moves on.
     function dontKnowButton(onclick) {
-      return h('button', { class: 'dont-know', onclick }, 'Не знаю');
+      return h('button', { class: 'dont-know', onclick }, t('dontKnow'));
     }
 
     function dontKnowBar(key) {
       record(key, 'again');
       const shownAt = Date.now();
-      const nextBtn = h('button', { class: 'primary', onclick: () => next() }, 'Дальше');
+      const nextBtn = h('button', { class: 'primary', onclick: () => next() }, t('next'));
       const bar = h('div', { class: 'controls' },
-        h('p', { class: 'verdict different' },
-          `Оценка: «Забыл» — карточка вернётся в этой ${practice ? 'тренировке' : 'сессии'}.`),
+        h('p', { class: 'verdict different' }, t(practice ? 'againPractice' : 'againSession')),
         nextBtn,
-        h('div', { class: 'hint' }, kbdHint('Enter или пробел — дальше.')),
+        h('div', { class: 'hint' }, kbdHint(t('nextHint'))),
       );
       onKey = e => {
         if ((e.key === 'Enter' || e.key === ' ') && Date.now() - shownAt > 300) { e.preventDefault(); next(); }
@@ -691,10 +706,10 @@
       if (practice) {
         $app.replaceChildren(
           h('h1', null, '¡Muy bien!'),
-          h('p', null, `Тренировка окончена. Пройдено карточек: ${reviewed}.`),
+          h('p', null, t('practiceOver', reviewed)),
           h('div', { class: 'row' },
-            h('a', { class: 'btn', href: '#/' }, '← На главную'),
-            h('button', { class: 'primary', onclick: route }, 'Ещё одна тренировка'),
+            h('a', { class: 'btn', href: '#/' }, t('toHome')),
+            h('button', { class: 'primary', onclick: route }, t('anotherPractice')),
           ),
         );
         return;
@@ -702,13 +717,11 @@
       const left = stats(Date.now()).due;
       $app.replaceChildren(
         h('h1', null, '¡Muy bien!'),
-        h('p', null, `Сессия окончена. Повторено карточек: ${reviewed}.`),
-        h('p', { class: 'muted' }, left
-          ? `Ещё к повторению: ${left}.`
-          : 'На сегодня всё повторено.'),
+        h('p', null, t('sessionOver', reviewed)),
+        h('p', { class: 'muted' }, left ? t('moreDue', left) : t('allReviewed')),
         h('div', { class: 'row' },
-          h('a', { class: 'btn', href: '#/' }, '← На главную'),
-          left ? h('button', { class: 'primary', onclick: route }, 'Ещё одна сессия') : null,
+          h('a', { class: 'btn', href: '#/' }, t('toHome')),
+          left ? h('button', { class: 'primary', onclick: route }, t('anotherSession')) : null,
         ),
       );
     }
@@ -722,24 +735,19 @@
   function answerBlock(p) {
     return h('div', { class: 'answer-block' },
       h('div', { class: 'row' }, esLine(p), playButtons(p)),
-      h('div', { class: 'ru' }, p.ru),
+      translationEl(p, 'ru'),
     );
   }
 
   function diffBlock(typed, correct) {
     const verdict = Diff.compare(typed, correct);
-    const text = {
-      exact: 'Точно!',
-      almost: 'Почти: отличаются только ударения, ñ, заглавные буквы или знаки.',
-      different: 'Есть отличия:',
-      empty: 'Ответ пустой.',
-    }[verdict];
+    const text = t({ exact: 'verdictExact', almost: 'verdictAlmost', different: 'verdictDifferent', empty: 'verdictEmpty' }[verdict]);
     const block = h('div', null, h('div', { class: 'verdict ' + verdict }, text));
     if (verdict === 'almost' || verdict === 'different') {
       const ops = Diff.diffChars(typed.trim().replace(/\s+/g, ' '), correct);
       block.append(
         h('div', { class: 'diff', lang: 'es' }, ops.map(o => o.type === 'same' ? o.text : h('span', { class: o.type }, o.text))),
-        h('div', { class: 'hint' }, 'Зачёркнуто — лишнее у вас, подчёркнуто — чего не хватает.'),
+        h('div', { class: 'hint' }, t('diffHint')),
       );
     }
     return block;
