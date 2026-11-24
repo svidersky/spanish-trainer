@@ -5,13 +5,16 @@
   "description": "Spanish trainer: Assimil-style lessons and SM-2 flashcards",
   "scripts": {
     "test": "node --test",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "mutate": "stryker run"
   },
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/tap-runner": "^10.1.1",
     "eslint": "^10.15.0",
     "globals": "^17.14.0",
     "jsdom": "^31.0.1"

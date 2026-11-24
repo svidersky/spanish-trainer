@@ -15,6 +15,18 @@ const START = new Date(2026, 10, 23, 18, 30).getTime();
 const DAY = 24 * 60 * 60 * 1000;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// Mutation testing (StrykerJS, stryker.config.mjs): mutated code looks up Stryker's state
+// (which mutant is active, which code ran) on its own global object and in process.env.
+// The window has neither, so give it Node's state object. A no-op outside Stryker.
+function shareMutationState(w) {
+  const name = process.env.STRYKER_NAMESPACE || '__stryker__';
+  const active = process.env.__STRYKER_ACTIVE_MUTANT__;
+  if (!globalThis[name] && !active) return;
+  const state = (globalThis[name] ??= {});
+  if (state.activeMutant === undefined && active) state.activeMutant = active;
+  w[name] = state;
+}
+
 function boot({
   hash = '#/',
   progress,
@@ -98,6 +110,7 @@ function boot({
     if (sync.syncConfig) w.localStorage.setItem(SYNC_KEY, JSON.stringify(sync.syncConfig));
   }
 
+  shareMutationState(w);
   for (const f of SCRIPTS) {
     if (f === 'data/audio.js' && !recordings) continue;
     if (SYNC_SCRIPTS.includes(f) && !sync) continue;

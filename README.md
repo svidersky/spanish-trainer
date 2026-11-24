@@ -84,4 +84,15 @@ npm run lint
 - [tests/lessons.test.js](tests/lessons.test.js) checks lesson data: unique ids, stress marks in transcriptions, paired ¿? and ¡! marks.
 - [tests/ui.test.js](tests/ui.test.js) runs the screens in jsdom: home and the settings page, lessons, marking a lesson completed, a session with both card directions, the timer, Practice over not-yet-Learned cards, export and import, and voice selection.
 
+### Mutation tests
+
+[StrykerJS](https://stryker-mutator.io) checks that the tests would notice a wrong answer, not just that they run the code: it makes one small change to the app at a time (a "mutant": `<` for `<=`, `true` for `false`, a removed call) and reruns the tests. A mutant that no test notices survives and points at a missing or too weak assertion.
+
+- On every pull request, [.github/workflows/mutation.yml](.github/workflows/mutation.yml) mutates only the lines of `js/*.js` the pull request added or changed ([tools/stryker-changed.mjs](tools/stryker-changed.mjs)) and fails when fewer than 80% of their mutants are caught. The log lists each survivor; the HTML report is in the run's artifacts.
+- Every Monday, and on demand from the Actions tab, it mutates the whole app as a report that never fails.
+- A mutant that behaves exactly like the original (an "equivalent" mutant) can be switched off with a comment that says why, e.g. `// Stryker disable next-line EqualityOperator: 0 and below give the same result`.
+- Locally: `npm run mutate` (whole app) or `node tools/stryker-changed.mjs origin/main`.
+
+The UI tests run the app inside jsdom, so [tests/helpers/dom.js](tests/helpers/dom.js) passes Stryker's state to the jsdom window; outside Stryker it does nothing.
+
 GitHub Actions runs the tests on every pull request and on every push to `main` ([.github/workflows/test.yml](.github/workflows/test.yml)), on Node 24 LTS, after the linter. The same workflow lints the workflows themselves with [jactionlint](https://jactionlint.jdx.dev): every action is pinned to a full commit SHA (with its version in a comment), and each job gets only the token permissions it needs.
