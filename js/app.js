@@ -186,14 +186,35 @@
 
   // ---------- backup reminder ----------
 
-  // Whether the progress needs a file copy: false if not (empty Deck, or exported less than a
-  // week ago), otherwise the whole days since the last export (null if never exported).
+  // Whether the progress needs a file copy: false if not (empty Deck, a Profile keeps it on the
+  // Sync server, or exported less than a week ago), otherwise the whole days since the last
+  // export (null if never exported).
   function backupDue(now) {
     const st = Store.get();
     if (stats(now).total === 0) return false;
+    if (hasProfile()) return false;
     if (!st.lastExport) return null;
     const days = Math.floor((now - st.lastExport) / SRS.DAY);
     return days >= 7 ? days : false;
+  }
+
+  // Whether a Profile is remembered on this device (its progress is then kept on the Sync server).
+  const hasProfile = () => !!(window.Sync && Sync.profile());
+
+  // A part of a screen that depends on the Profile: re-rendered in place on every Sync status
+  // change, so the rest of the screen (scroll position, a field being typed in) is left alone.
+  // render() returns a node or null. Returns the node to place and the function that stops it.
+  function followsProfile(render) {
+    const current = () => render() || document.createComment('');
+    let node = current();
+    const off = window.Sync
+      ? Sync.onStatus(() => {
+          const next = current();
+          node.replaceWith(next);
+          node = next;
+        })
+      : () => {};
+    return { node, off };
   }
 
   // The reminder text, with a link to the settings page when shown elsewhere.
@@ -243,12 +264,13 @@
       }),
     );
 
-    const reminder = backupReminder(now, true);
+    const reminder = followsProfile(() => backupReminder(Date.now(), true));
+    cleanup = reminder.off;
     $app.append(
       h('h1', null, t('homeTitle')),
       h('p', { class: 'sub' }, t('homeSub')),
       reviewPanel,
-      ...(reminder ? [reminder] : []),
+      reminder.node,
       h('h2', null, t('lessons')),
       lessonList,
     );
@@ -258,7 +280,6 @@
 
   function renderSettings() {
     const st = Store.get();
-    const now = Date.now();
 
     document.title = t('progressAndSettings');
 
@@ -289,24 +310,26 @@
     updateVoice();
     const offVoice = Speech.onChange(updateVoice);
     const sync = syncSection();
-    cleanup = () => { offVoice(); sync.off(); };
+    const reminder = followsProfile(() => backupReminder(Date.now(), false));
+    const fileNote = followsProfile(() => h('p', { class: 'muted' }, st.lastExport
+      ? t('lastExport', new Date(st.lastExport).toLocaleString(I18n.locale()))
+      : hasProfile()
+        ? t('fileIsExtraCopy')
+        : t('onlyInBrowser')));
+    cleanup = () => { offVoice(); sync.off(); reminder.off(); fileNote.off(); };
 
     $app.append(
       h('p', null, h('a', { href: '#/' }, t('toHome'))),
       h('h1', null, t('progressAndSettings')),
       ...(sync.el ? [sync.el] : []),
       h('section', { class: 'panel' },
-        backupReminder(now, false),
+        reminder.node,
         h('div', { class: 'row' },
           h('button', { onclick: exportProgress }, t('exportButton')),
           h('button', { onclick: () => fileInput.click() }, t('importButton')),
           fileInput,
         ),
-        h('p', { class: 'muted' }, st.lastExport
-          ? t('lastExport', new Date(st.lastExport).toLocaleString(I18n.locale()))
-          : window.Sync && Sync.profile()
-            ? t('fileIsExtraCopy')
-            : t('onlyInBrowser')),
+        fileNote.node,
         h('div', { class: 'row' }, h('label', null, t('sessionMinutesField')), minutes),
         h('div', { class: 'row' }, h('label', null, t('practiceCardsField')), practiceSize),
         voiceStatus,
@@ -323,6 +346,10 @@
       const parts = routeParts();
       if (!parts.length || parts[0] === 'settings') route();
     });
+
+    // The gear's mark follows the Profile on every screen; the home screen and the settings
+    // page update their own reminder in place (followsProfile).
+    Sync.onStatus(applyLanguage);
   }
 
   function syncStatusText(s) {
