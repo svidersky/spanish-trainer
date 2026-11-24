@@ -192,6 +192,12 @@ test('no screen renders "null", "undefined" or "[object …]"', async t => {
     const app = setup(t, { hash, progress: lessonOneProgress() });
     assert.doesNotMatch(app.text('main'), /\bnull\b|\bundefined\b|\[object /, hash);
   }
+  for (const hash of ['#/', '#/settings']) {
+    const empty = setup(t, { hash });
+    assert.doesNotMatch(empty.text('main'), /\bnull\b|\bundefined\b|\[object /, 'empty deck, ' + hash);
+    const saved = setup(t, { hash, progress: lessonOneProgress({ lastExport: START - DAY }) });
+    assert.doesNotMatch(saved.text('main'), /\bnull\b|\bundefined\b|\[object /, 'recent export, ' + hash);
+  }
   const noVoice = setup(t, { hash: '#/lesson/1', voices: [] });
   assert.doesNotMatch(noVoice.text('main'), /\bnull\b|\bundefined\b|\[object /);
 });

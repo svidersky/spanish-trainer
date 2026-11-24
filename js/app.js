@@ -1,4 +1,4 @@
-// Trainer screens: home, Lesson, review Session and Practice.
+// Trainer screens: home, settings, Lesson, review Session and Practice.
 // Learner-facing strings come from js/i18n.js in the chosen interface language (Russian or English).
 (function () {
   'use strict';
@@ -150,6 +150,7 @@
     if (parts[0] === 'lesson') renderLesson(parts[1]);
     else if (parts[0] === 'review') renderReview({ practice: false });
     else if (parts[0] === 'practice') renderReview({ practice: true });
+    else if (parts[0] === 'settings') renderSettings();
     else renderHome();
   }
 
@@ -166,15 +167,42 @@
       route();
     },
   }, I18n.LANGS.map(l => h('option', { value: l, lang: l }, I18n.NAMES[l])));
-  document.querySelector('header .top-inner').append($lang);
+  // The gear opens the settings page; it is marked while the progress needs a file copy.
+  const $gear = h('a', { class: 'gear', href: '#/settings' }, '⚙');
+  document.querySelector('header .top-inner').append(h('div', { class: 'tools' }, $gear, $lang));
 
-  // The parts outside the screens: the page language, the brand and the dropdown.
+  // The parts outside the screens: the page language, the brand, the gear and the dropdown.
   function applyLanguage() {
     document.documentElement.lang = I18n.lang();
     if ($brand) $brand.textContent = t('appTitle');
     $lang.value = I18n.lang();
     $lang.setAttribute('aria-label', t('langLabel'));
     $lang.title = t('langLabel');
+    const attention = backupDue(Date.now()) !== false;
+    $gear.classList.toggle('attention', attention);
+    $gear.setAttribute('aria-label', t(attention ? 'settingsAttention' : 'settingsLabel'));
+    $gear.title = t('settingsLabel');
+  }
+
+  // ---------- backup reminder ----------
+
+  // Whether the progress needs a file copy: false if not (empty Deck, or exported less than a
+  // week ago), otherwise the whole days since the last export (null if never exported).
+  function backupDue(now) {
+    const st = Store.get();
+    if (stats(now).total === 0) return false;
+    if (!st.lastExport) return null;
+    const days = Math.floor((now - st.lastExport) / SRS.DAY);
+    return days >= 7 ? days : false;
+  }
+
+  // The reminder text, with a link to the settings page when shown elsewhere.
+  function backupReminder(now, withLink) {
+    const days = backupDue(now);
+    if (days === false) return null;
+    return h('div', { class: 'warn' },
+      days === null ? t('neverExported') : t('exportedAgo', I18n.days(days)),
+      withLink ? [' ', h('a', { href: '#/settings' }, t('saveCopyLink'))] : null);
   }
 
   // ---------- home ----------
@@ -215,7 +243,25 @@
       }),
     );
 
-    // Settings and progress backup
+    const reminder = backupReminder(now, true);
+    $app.append(
+      h('h1', null, t('homeTitle')),
+      h('p', { class: 'sub' }, t('homeSub')),
+      reviewPanel,
+      ...(reminder ? [reminder] : []),
+      h('h2', null, t('lessons')),
+      lessonList,
+    );
+  }
+
+  // ---------- settings: progress backup, Sync, Session and Practice sizes, voice ----------
+
+  function renderSettings() {
+    const st = Store.get();
+    const now = Date.now();
+
+    document.title = t('progressAndSettings');
+
     // A whole-number setting clamped to [min, max]; anything unreadable falls back to the default.
     const numberSetting = (name, min, max, fallback, label) => h('input', {
       type: 'number', min: String(min), max: String(max), value: st.settings[name], class: 'answer',
@@ -233,14 +279,6 @@
 
     const fileInput = h('input', { type: 'file', accept: '.json,application/json', hidden: true, onchange: importProgress });
 
-    const daysSinceExport = st.lastExport ? Math.floor((now - st.lastExport) / SRS.DAY) : null;
-    const exportReminder = s.total > 0 && (daysSinceExport === null || daysSinceExport >= 7)
-      ? h('div', { class: 'warn' },
-          daysSinceExport === null
-            ? t('neverExported')
-            : t('exportedAgo', I18n.days(daysSinceExport)))
-      : null;
-
     const voiceStatus = h('p', { class: 'muted' });
     const updateVoice = () => voiceStatus.replaceChildren(
       ...(Speech.hasRecordings()
@@ -254,15 +292,11 @@
     cleanup = () => { offVoice(); sync.off(); };
 
     $app.append(
-      h('h1', null, t('homeTitle')),
-      h('p', { class: 'sub' }, t('homeSub')),
-      reviewPanel,
-      h('h2', null, t('lessons')),
-      lessonList,
-      h('h2', null, t('progressAndSettings')),
+      h('p', null, h('a', { href: '#/' }, t('toHome'))),
+      h('h1', null, t('progressAndSettings')),
       ...(sync.el ? [sync.el] : []),
       h('section', { class: 'panel' },
-        exportReminder,
+        backupReminder(now, false),
         h('div', { class: 'row' },
           h('button', { onclick: exportProgress }, t('exportButton')),
           h('button', { onclick: () => fileInput.click() }, t('importButton')),
@@ -282,11 +316,12 @@
 
   // ---------- Sync between devices ----------
 
-  // Re-draw the home screen when another device's progress arrives (other screens keep going:
-  // a review Session holds the same progress object, which Sync updates in place).
+  // Re-draw the home screen or the settings page when another device's progress arrives (other
+  // screens keep going: a review Session holds the same progress object, which Sync updates in place).
   if (window.Sync) {
     Sync.onData(() => {
-      if (!routeParts().length) route();
+      const parts = routeParts();
+      if (!parts.length || parts[0] === 'settings') route();
     });
   }
 
