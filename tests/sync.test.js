@@ -1,4 +1,4 @@
-// Sync of progress between devices through the Sync server, driven from the home screen.
+// Sync of progress between devices through the Sync server, driven from the settings page.
 // The app's fetch() goes straight to the real Worker code with in-memory Durable Objects.
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -62,7 +62,7 @@ function device(t, c, opts = {}) {
   return app;
 }
 
-// Changes a setting on the home screen, which saves progress like any other change.
+// Changes a setting on the settings page (which must be open), which saves progress like any other change.
 function setMinutes(app, minutes) {
   const input = app.$('input[aria-label="Длительность сессии в минутах"]');
   input.value = String(minutes);
@@ -88,7 +88,13 @@ function bigProgress() {
   return p;
 }
 
+// The Sync panel is on the settings page.
+async function openSettings(app) {
+  if (app.window.location.hash !== '#/settings') await app.go('#/settings');
+}
+
 async function connect(app, name = NAME, pin = PIN) {
+  await openSettings(app);
   app.$('.sync input[name="sync-name"]').value = name;
   app.$('.sync input[name="sync-pin"]').value = pin;
   app.byText('.sync button', 'Подключить').click();
@@ -96,8 +102,8 @@ async function connect(app, name = NAME, pin = PIN) {
 
 const synced = app => app.waitFor(() => /синхронизировано/i.test(app.text('.sync-status')), 3000);
 
-test('sync: the home screen offers name + PIN when not connected', t => {
-  const app = device(t, cloud());
+test('sync: the settings page offers name + PIN when not connected', t => {
+  const app = device(t, cloud(), { hash: '#/settings' });
   assert.ok(app.$('.sync input[name="sync-name"]'));
   const pin = app.$('.sync input[name="sync-pin"]');
   assert.equal(pin.getAttribute('inputmode'), 'numeric');
@@ -126,6 +132,7 @@ test('sync: a second device gets the progress after connecting', async t => {
   assert.equal(b.$$('.lessons li.done').length, 0);
   await connect(b);
   await synced(b);
+  await b.go('#/');
   await b.waitFor(() => b.$('.lessons li.done'));
   assert.equal(b.$$('.stat b')[2].textContent, '16');
   assert.equal(Object.keys(b.progress().cards).length, 16, 'saved locally too');
@@ -139,6 +146,20 @@ test('sync: a remembered Profile syncs automatically when the app opens', async 
 
   const b = device(t, c, { syncConfig: { name: NAME, pin: PIN } });
   await b.waitFor(() => b.$('.lessons li.done'));
+});
+
+test('sync: an open settings page shows the settings that arrive from another device', async t => {
+  const c = cloud();
+  const a = device(t, c, { progress: lessonOneProgress() });
+  await connect(a);
+  await synced(a);
+  a.advance(1000);
+  setMinutes(a, 40);
+  await eventually(async () => (await c.stored()).progress.settings.sessionMinutes === 40, 3000, '40 minutes never reached the server');
+
+  const b = device(t, c, { hash: '#/settings', syncConfig: { name: NAME, pin: PIN } });
+  await b.waitFor(() => b.$('input[aria-label="Длительность сессии в минутах"]').value === '40', 3000);
+  assert.equal(b.window.location.hash, '#/settings');
 });
 
 test('sync: a wrong PIN shows a message and leaves local progress alone', async t => {
@@ -245,6 +266,7 @@ test('sync: no connection shows a message and the app keeps working', async t =>
   const app = device(t, c, { progress: lessonOneProgress() });
   await connect(app);
   await app.waitFor(() => /нет связи/i.test(app.text('.sync-status')));
+  await app.go('#/');
   assert.equal(app.$$('.lessons li').length, 10);
   assert.deepEqual(app.errors, []);
 });
@@ -306,7 +328,7 @@ test('sync: progress larger than a keepalive request allows (64 KiB) still syncs
 
 test('sync: a pending change is sent at once, as a keepalive request, when the page is hidden', async t => {
   const c = cloud();
-  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, debounceMs: 60000 });
+  const app = device(t, c, { hash: '#/settings', progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, debounceMs: 60000 });
   await synced(app); // the sync when the app opens
   const saves = () => c.calls.filter(x => x.url.endsWith('/save'));
   const before = saves().length;
@@ -330,7 +352,7 @@ test('sync: changes made offline are sent when the connection comes back', async
   await synced(owner);
 
   c.setOffline(true);
-  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN } });
+  const app = device(t, c, { hash: '#/settings', progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN } });
   await app.waitFor(() => /нет связи/i.test(app.text('.sync-status')));
   setMinutes(app, 30);
   await sleep(50);
@@ -376,9 +398,11 @@ test('sync: a save still conflicting after every quick retry is tried again late
 test('sync: stays off while the Worker address is still the placeholder', async t => {
   const c = cloud();
   const url = 'https://spanish-progress.REPLACE_WITH_SUBDOMAIN.workers.dev';
-  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, url });
+  const app = device(t, c, { hash: '#/settings', progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, url });
   await sleep(50);
-  assert.equal(app.$('.sync'), null, 'no Sync panel on the home screen');
+  assert.equal(app.$('.sync'), null, 'no Sync panel on the settings page');
+  assert.ok(app.$('main input[type=file]'), 'the file backup is still there');
+  await app.go('#/');
   assert.equal(c.calls.length, 0, 'nothing is sent');
   assert.equal(app.$$('.lessons li').length, 10, 'the app works as before');
   assert.deepEqual(app.errors, []);
@@ -386,9 +410,9 @@ test('sync: stays off while the Worker address is still the placeholder', async 
 
 test('sync: without an override the app syncs with the deployed Worker', async t => {
   const c = cloud();
-  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, url: null });
+  const app = device(t, c, { hash: '#/settings', progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, url: null });
   await synced(app);
-  assert.ok(app.$('.sync'), 'the Sync panel is on the home screen');
+  assert.ok(app.$('.sync'), 'the Sync panel is on the settings page');
   assert.equal(c.calls[0].url, 'https://spanish-progress.spanish-trainer.workers.dev/load');
 });
 
@@ -403,6 +427,7 @@ function chooseLanguage(app, lang) {
 }
 
 async function connectEn(app, name = NAME, pin = PIN) {
+  await openSettings(app);
   app.$('.sync input[name="sync-name"]').value = name;
   app.$('.sync input[name="sync-pin"]').value = pin;
   app.$('.sync button.primary').click();
@@ -420,7 +445,7 @@ function russianIn(app, selector) {
 test('sync: in English the Sync panel and its messages are English', async t => {
   const c = cloud();
   const settings = { sessionMinutes: 15, lang: 'en' };
-  const a = device(t, c, { progress: lessonOneProgress({ settings }) });
+  const a = device(t, c, { hash: '#/settings', progress: lessonOneProgress({ settings }) });
   assert.deepEqual(russianIn(a, '.sync'), [], 'the form');
   await connectEn(a, 'x', PIN);
   await a.waitFor(() => a.text('.sync-status'));

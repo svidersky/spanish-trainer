@@ -74,10 +74,26 @@ test('language: a dropdown in the header offers Русский and English; Russ
 });
 
 test('language: the dropdown is on every screen', async t => {
-  for (const hash of ['#/lesson/1', '#/review', '#/practice']) {
+  for (const hash of ['#/lesson/1', '#/review', '#/practice', '#/settings']) {
     const app = setup(t, { hash, progress: lessonOneProgress() });
     assert.ok(app.$('header select'), hash);
   }
+});
+
+test('language: the settings gear is labelled in English', t => {
+  const fresh = setup(t, { progress: en(lessonOneProgress({ lastExport: START - DAY })) });
+  assert.equal(fresh.$('header a[href="#/settings"]').getAttribute('aria-label'), 'Settings');
+  assert.equal(fresh.$('header a[href="#/settings"]').title, 'Settings');
+  const stale = setup(t, { progress: en(lessonOneProgress()) });
+  assert.equal(stale.$('header a[href="#/settings"]').getAttribute('aria-label'), 'Settings: progress not saved to a file');
+});
+
+test('language: switching on the settings page keeps it open', async t => {
+  const app = setup(t, { hash: '#/settings' });
+  choose(app, 'en');
+  assert.equal(app.window.location.hash, '#/settings');
+  assert.equal(app.text('main h1'), 'Progress and settings');
+  assert.equal(app.document.title, 'Progress and settings');
 });
 
 test('language: choosing English redraws the screen in English and is a synced setting', t => {
@@ -179,11 +195,14 @@ test('language: interval previews use English plurals', async t => {
 test('language: the export reminder uses English plurals', t => {
   const app = setup(t, { progress: en(lessonOneProgress({ lastExport: START - 8 * DAY })) });
   assert.match(app.text('.warn'), /\b8 days ago\b/);
+  assert.match(app.text('main .warn a[href="#/settings"]'), /Save a copy/);
+  const settings = setup(t, { hash: '#/settings', progress: en(lessonOneProgress({ lastExport: START - 8 * DAY })) });
+  assert.match(settings.text('.warn'), /\b8 days ago\b/);
 });
 
 // ---------- no Russian left anywhere ----------
 
-test('language: in English no Russian is left on the home screen', t => {
+test('language: in English no Russian is left on the home screen or the settings page', t => {
   const allReviewed = lessonOneProgress();
   for (const c of Object.values(allReviewed.cards)) c.due = START + DAY;
   for (const [where, progress, opts] of [
@@ -197,6 +216,7 @@ test('language: in English no Russian is left on the home screen', t => {
     ['no speech synthesis', en(), { speech: false }],
   ]) {
     noRussian(setup(t, { progress, ...opts }), where);
+    noRussian(setup(t, { hash: '#/settings', progress, ...opts }), 'settings, ' + where);
   }
 });
 
@@ -214,7 +234,7 @@ test('language: in English the missing-voice hints are English on every platform
     ['iPhone', UA.iphone, 5], ['Android', UA.android, 5], ['Windows', UA.windows, 0],
     ['Mac', UA.mac, 0], ['other', UA.other, 0],
   ]) {
-    const app = setup(t, { progress: en(), voices: [], userAgent, maxTouchPoints: touch });
+    const app = setup(t, { hash: '#/settings', progress: en(), voices: [], userAgent, maxTouchPoints: touch });
     noRussian(app, name);
     hints.add(app.text('main .warn'));
   }
@@ -318,7 +338,7 @@ test('language: in English no Russian is left in a Practice', async t => {
 });
 
 test('language: in English file import messages are English', async t => {
-  const app = setup(t, { progress: en() });
+  const app = setup(t, { hash: '#/settings', progress: en() });
   const input = app.$('input[type=file]');
   await app.upload(input, '{"foo": 1}');
   await app.waitFor(() => app.alerts.length === 1);
