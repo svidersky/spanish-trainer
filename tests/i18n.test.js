@@ -58,13 +58,14 @@ function choose(app, lang) {
 
 // ---------- the dropdown ----------
 
-test('language: a dropdown in the header offers Русский and English; Russian by default', t => {
+test('language: a dropdown in the header offers 🇷🇺 Русский and 🇬🇧 English; Russian by default', t => {
   const app = setup(t);
   const select = app.$('header select');
   assert.ok(select, 'a <select> in the header');
   assert.deepEqual(
     Array.from(select.options).map(o => [o.value, o.textContent]),
-    [['ru', 'Русский'], ['en', 'English']],
+    [['ru', '🇷🇺 Русский'], ['en', '🇬🇧 English']],
+    'each language is shown with its flag',
   );
   assert.equal(select.value, 'ru');
   assert.ok(select.getAttribute('aria-label'), 'the dropdown has an accessible name');
