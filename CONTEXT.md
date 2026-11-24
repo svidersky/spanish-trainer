@@ -18,6 +18,9 @@ All Cards of all Phrases from Completed Lessons. There is a single Deck shared b
 **Session** («Сессия»)
 One time-boxed practice run over the Deck (15 minutes by default). The Cards that have been due the longest come first. When time runs out, the current Card is played through to its Grade and the Session ends. Cards not reached stay in the queue.
 
+**Practice** («Тренировка»)
+An extra run over the Cards that are not Learned yet, at any time, whether they are due or not. The hardest Cards come first: the lowest SM-2 ease, then the most *again* answers, then the soonest due. A Practice takes a set number of Cards (20 by default, changed in the settings) rather than a set time. Only *again* changes a Card's schedule, exactly as in a Session, and brings the Card back at the end of the same Practice, beyond the set number; *hard*, *good* and *easy* leave the schedule as it was, because SM-2 is not meant for answers given before the Card is due.
+
 **Profile** («Профиль»)
 A name and a 4-digit PIN under which one learner's progress is kept on the Sync server. There is no registration: the first successful sync with a new name creates the Profile with that PIN. After 5 wrong PINs in a row the name is locked for an hour.
 
