@@ -375,10 +375,19 @@ test('sync: a save still conflicting after every quick retry is tried again late
 
 test('sync: stays off while the Worker address is still the placeholder', async t => {
   const c = cloud();
-  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, url: null });
+  const url = 'https://spanish-progress.REPLACE_WITH_SUBDOMAIN.workers.dev';
+  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, url });
   await sleep(50);
   assert.equal(app.$('.sync'), null, 'no Sync panel on the home screen');
   assert.equal(c.calls.length, 0, 'nothing is sent');
   assert.equal(app.$$('.lessons li').length, 10, 'the app works as before');
   assert.deepEqual(app.errors, []);
+});
+
+test('sync: without an override the app syncs with the deployed Worker', async t => {
+  const c = cloud();
+  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, url: null });
+  await synced(app);
+  assert.ok(app.$('.sync'), 'the Sync panel is on the home screen');
+  assert.equal(c.calls[0].url, 'https://spanish-progress.spanish-trainer.workers.dev/load');
 });
