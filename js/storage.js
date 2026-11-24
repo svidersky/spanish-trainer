@@ -50,7 +50,7 @@
     try {
       root.localStorage.setItem(KEY, JSON.stringify(state));
       return true;
-    } catch {
+    } catch (err) {
       console.warn('Could not save progress', err);
       return false;
     }
