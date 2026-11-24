@@ -166,6 +166,21 @@ test('bodies over 512 KB are rejected with 413', async () => {
   assert.equal((await call('/save', big)).status, 413);
 });
 
+test('a body of exactly 512 KB is accepted and one byte more is rejected', async () => {
+  const { call } = server();
+  const LIMIT = 512 * 1024;
+  // A save body padded to an exact size in bytes (UTF-8, as the limit counts).
+  const sized = bytes => {
+    const body = { name: 'leonid', pin: '4831', version: 0, progress: { pad: '' } };
+    body.progress.pad = 'x'.repeat(bytes - new TextEncoder().encode(JSON.stringify(body)).length);
+    const text = JSON.stringify(body);
+    assert.equal(new TextEncoder().encode(text).length, bytes, 'test setup: exact body size');
+    return text;
+  };
+  assert.equal((await call('/save', sized(LIMIT))).status, 200, 'exactly 512 KB');
+  assert.equal((await call('/save', sized(LIMIT + 1))).status, 413, '512 KB + 1 byte');
+});
+
 test('two saves racing to create the same Profile: one wins, the other gets 409', async () => {
   const { call } = server();
   const a = { ...PROGRESS, completedLessons: [1] };

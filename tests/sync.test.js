@@ -1,5 +1,5 @@
 // Sync of progress between devices through the Sync server, driven from the home screen.
-// The app's fetch() goes straight to the real Worker code with an in-memory KV.
+// The app's fetch() goes straight to the real Worker code with in-memory Durable Objects.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { boot, lessonOneProgress, START, DAY } = require('./helpers/dom');
@@ -13,33 +13,79 @@ test.before(async () => {
 
 const NAME = 'leonid';
 const PIN = '4831';
+// Browsers refuse a keepalive request whose body (with other keepalive requests in flight)
+// is over 64 KiB, and fetch() rejects with a TypeError (https://fetch.spec.whatwg.org/,
+// HTTP-network-or-cache fetch: "greater than 64 kibibytes" is a network error).
+const KEEPALIVE_LIMIT = 64 * 1024;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function cloud() {
   const env = { PROFILES: fakeProfiles() };
   const calls = [];
   let offline = false;
+  const post = (path, body) => worker.fetch(new Request('https://sync.test' + path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }), env);
   return {
     env,
     calls,
+    // Runs before each /save from an app reaches the server (e.g. another device saving first).
+    beforeSave: null,
     setOffline(v) { offline = v; },
     async fetch(url, init = {}) {
       if (offline) throw new TypeError('Failed to fetch');
-      calls.push({ url: String(url), body: init.body ? JSON.parse(init.body) : null });
+      if (init.keepalive && new TextEncoder().encode(init.body || '').length > KEEPALIVE_LIMIT) {
+        throw new TypeError('Failed to fetch');
+      }
+      calls.push({ url: String(url), body: init.body ? JSON.parse(init.body) : null, keepalive: !!init.keepalive });
+      if (String(url).endsWith('/save') && this.beforeSave) await this.beforeSave();
       return worker.fetch(new Request(url, init), env);
     },
     async stored(name = NAME, pin = PIN) {
-      const res = await worker.fetch(new Request('https://sync.test/load', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, pin }),
-      }), env);
-      return res.json();
+      return (await post('/load', { name, pin })).json();
+    },
+    // Another device saves a change to the server copy, straight to the server.
+    async rivalSave(change) {
+      const { progress, version } = await this.stored();
+      change(progress);
+      return post('/save', { name: NAME, pin: PIN, version, progress });
     },
   };
 }
 
 function device(t, c, opts = {}) {
-  const app = boot({ ...opts, sync: { fetch: c.fetch.bind(c), syncConfig: opts.syncConfig } });
+  const app = boot({
+    ...opts,
+    sync: { fetch: c.fetch.bind(c), syncConfig: opts.syncConfig, url: opts.url, debounceMs: opts.debounceMs },
+  });
   t.after(() => app.close());
   return app;
+}
+
+// Changes a setting on the home screen, which saves progress like any other change.
+function setMinutes(app, minutes) {
+  const input = app.$('input[aria-label="Длительность сессии в минутах"]');
+  input.value = String(minutes);
+  input.dispatchEvent(new app.window.Event('change'));
+}
+
+async function eventually(fn, timeout, message) {
+  const until = Date.now() + timeout;
+  for (;;) {
+    const v = await fn();
+    if (v) return v;
+    if (Date.now() > until) assert.fail(message);
+    await sleep(20);
+  }
+}
+
+// Progress bigger than a keepalive request may carry: Lesson 1 plus many answered Cards.
+function bigProgress() {
+  const p = lessonOneProgress();
+  for (let i = 0; i < 1500; i++) {
+    p.cards[`extra-${i}|recog`] = { ef: 2.5, reps: 3, interval: 10, lapses: 0, due: START + 9 * DAY, last: START - DAY };
+  }
+  return p;
 }
 
 async function connect(app, name = NAME, pin = PIN) {
@@ -213,4 +259,126 @@ test('sync: "Отключить" forgets the name and PIN on this device only', 
   assert.ok(app.$('.sync input[name="sync-name"]'));
   assert.ok((await c.stored()).progress, 'the server copy stays');
   assert.equal(Object.keys(app.progress().cards).length, 16, 'local progress stays');
+});
+
+test('sync: a wrong PIN typed offline is forgotten once the server rejects it, so it cannot lock the name', async t => {
+  const c = cloud();
+  const owner = device(t, c, { progress: lessonOneProgress() });
+  await connect(owner);
+  await synced(owner);
+
+  c.setOffline(true);
+  const app = device(t, c, { progress: lessonOneProgress() });
+  await connect(app, NAME, '0000');
+  await app.waitFor(() => /нет связи/i.test(app.text('.sync-status')));
+
+  c.setOffline(false);
+  app.window.dispatchEvent(new app.window.Event('online'));
+  await app.waitFor(() => /неверный PIN/i.test(app.text('.sync-status')));
+  assert.equal(app.syncConfig(), null, 'the rejected PIN is no longer remembered');
+  assert.equal(app.$('.sync-form').hidden, false, 'the form asks for the name and PIN again');
+
+  // More answers and reconnects must not keep sending the wrong PIN.
+  for (let i = 0; i < 6; i++) {
+    setMinutes(app, 20 + i);
+    app.window.dispatchEvent(new app.window.Event('online'));
+    await sleep(30);
+  }
+  const wrongTries = c.calls.filter(x => x.body && x.body.pin === '0000').length;
+  assert.equal(wrongTries, 1, 'the wrong PIN reached the server only once');
+  const forOwner = await c.stored();
+  assert.notEqual(forOwner.error, 'locked', 'the name is not locked for its owner');
+  assert.deepEqual(forOwner.progress.completedLessons, [1]);
+});
+
+test('sync: progress larger than a keepalive request allows (64 KiB) still syncs', async t => {
+  const c = cloud();
+  const progress = bigProgress();
+  const size = new TextEncoder().encode(JSON.stringify(progress)).length;
+  assert.ok(size > KEEPALIVE_LIMIT && size < 512 * 1024, `test setup: ${size} bytes is over 64 KiB and under 512 KB`);
+  const app = device(t, c, { progress });
+  await connect(app);
+  await synced(app);
+  const stored = await c.stored();
+  assert.equal(Object.keys(stored.progress.cards).length, Object.keys(progress.cards).length, 'every Card reached the server');
+  assert.deepEqual(app.errors, []);
+});
+
+test('sync: a pending change is sent at once, as a keepalive request, when the page is hidden', async t => {
+  const c = cloud();
+  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, debounceMs: 60000 });
+  await synced(app); // the sync when the app opens
+  const saves = () => c.calls.filter(x => x.url.endsWith('/save'));
+  const before = saves().length;
+
+  setMinutes(app, 25);
+  await sleep(50);
+  assert.equal(saves().length, before, 'the change waits for the debounce');
+
+  Object.defineProperty(app.document, 'visibilityState', { value: 'hidden', configurable: true });
+  app.document.dispatchEvent(new app.window.Event('visibilitychange'));
+  await app.waitFor(() => saves().length > before);
+  const last = saves().at(-1);
+  assert.equal(last.body.progress.settings.sessionMinutes, 25);
+  assert.equal(last.keepalive, true, 'a small save survives the page being closed');
+});
+
+test('sync: changes made offline are sent when the connection comes back', async t => {
+  const c = cloud();
+  const owner = device(t, c, { progress: lessonOneProgress() });
+  await connect(owner);
+  await synced(owner);
+
+  c.setOffline(true);
+  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN } });
+  await app.waitFor(() => /нет связи/i.test(app.text('.sync-status')));
+  setMinutes(app, 30);
+  await sleep(50);
+
+  c.setOffline(false);
+  app.window.dispatchEvent(new app.window.Event('online'));
+  await eventually(async () => (await c.stored()).progress.settings.sessionMinutes === 30, 3000,
+    'the offline change reached the server');
+});
+
+// Device B has answered the first Card; another device keeps saving just before B does.
+async function conflictingDevice(t, rivalSaves) {
+  const c = cloud();
+  const owner = device(t, c, { progress: lessonOneProgress() });
+  await connect(owner);
+  await synced(owner);
+
+  let left = rivalSaves;
+  c.beforeSave = async () => {
+    if (left-- > 0) await c.rivalSave(p => { p.completedLessons = [1, 2]; });
+  };
+  const onB = lessonOneProgress();
+  onB.cards['l01-01|recog'] = { ef: 2.6, reps: 1, interval: 1, lapses: 0, due: START + DAY, last: START };
+  device(t, c, { progress: onB, syncConfig: { name: NAME, pin: PIN } });
+  return c;
+}
+
+const bothKept = async c => {
+  const { progress } = await c.stored();
+  return progress.completedLessons.includes(2) && progress.cards['l01-01|recog'].reps === 1;
+};
+
+test('sync: when another device saves in between (409), the copies are merged and saved again', async t => {
+  const c = await conflictingDevice(t, 1);
+  await eventually(() => bothKept(c), 3000, 'both the other device\'s change and this answer are on the server');
+});
+
+test('sync: a save still conflicting after every quick retry is tried again later, not dropped', async t => {
+  const c = await conflictingDevice(t, 5); // as many conflicts as quick retries
+  await eventually(() => bothKept(c), 8000, 'this answer reached the server after the quick retries ran out');
+});
+
+test('sync: stays off while the Worker address is still the placeholder', async t => {
+  const c = cloud();
+  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN }, url: null });
+  await sleep(50);
+  assert.equal(app.$('.sync'), null, 'no Sync panel on the home screen');
+  assert.equal(c.calls.length, 0, 'nothing is sent');
+  assert.equal(app.$$('.lessons li').length, 10, 'the app works as before');
+  assert.deepEqual(app.errors, []);
 });

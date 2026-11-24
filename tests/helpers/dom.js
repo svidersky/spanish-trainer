@@ -28,7 +28,8 @@ function boot({
   maxTouchPoints = 0,
   recordings = true,
   audioFails = false,
-  // { fetch, syncConfig } — loads the Sync scripts and routes the app's fetch() to a test server.
+  // { fetch, syncConfig, url, debounceMs } — loads the Sync scripts and routes the app's fetch()
+  // to a test server. url: null leaves the Worker address unset (the placeholder in js/sync.js).
   sync,
 } = {}) {
   const errors = [];
@@ -94,8 +95,8 @@ function boot({
 
   if (sync) {
     w.fetch = sync.fetch;
-    w.SYNC_URL = 'https://sync.test';
-    w.SYNC_DEBOUNCE_MS = 0;
+    if (sync.url !== null) w.SYNC_URL = sync.url || 'https://sync.test';
+    w.SYNC_DEBOUNCE_MS = Number.isFinite(sync.debounceMs) ? sync.debounceMs : 0;
     if (sync.syncConfig) w.localStorage.setItem(SYNC_KEY, JSON.stringify(sync.syncConfig));
   }
 
