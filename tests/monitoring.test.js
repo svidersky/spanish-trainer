@@ -51,7 +51,7 @@ test('no personal data is sent with error reports', t => {
 
 test('index.html configures and loads Sentry before any app script', () => {
   const html = read('index.html');
-  const scripts = Array.from(html.matchAll(/<script\b[^>]*>/g), m => m[0]);
+  const scripts = Array.from(html.matchAll(/<script\b[^>]*>/gi), m => m[0]);
   const config = scripts.findIndex(s => /src="js\/monitoring\.js"/.test(s));
   const loader = scripts.findIndex(s => /src="https:\/\/js\.sentry-cdn\.com\/[0-9a-f]{32}\.min\.js"/.test(s));
 
