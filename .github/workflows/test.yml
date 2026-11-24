@@ -43,3 +43,20 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/jactionlint@72c00452809bcca05b8bc12acdcf15dd7a9c1c5e # v2.6.0
+
+  # Lints the agent configuration (CLAUDE.md, .claude/) with agnix: errors fail the job,
+  # warnings are printed but do not (no strict mode). https://github.com/agent-sh/agnix
+  agent-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: agent-sh/agnix@fefbece836bd558bbbc0847633f995d8138e8f08 # v0.61.0
+        with:
+          # The action downloads "latest" by default; pin the binary to the action's release.
+          version: v0.61.0
+          target: claude-code
