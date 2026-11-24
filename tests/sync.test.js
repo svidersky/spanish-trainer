@@ -488,8 +488,22 @@ test('sync: the language chosen on one device reaches the other', async t => {
 // With a Profile the progress is kept on the Sync server, so the reminder to save a file copy
 // (on the home screen, on the settings page and as the gear's mark) is not shown.
 
+// The two reminder texts: never saved to a file, and saved to a file too long ago.
 const BACKUP_REMINDER = /сохранялся|сохранение в файл/;
-const gearMarked = app => app.$('header a[href="#/settings"]').classList.contains('attention');
+const gear = app => app.$('header a[href="#/settings"]');
+const gearMarked = app => gear(app).classList.contains('attention');
+const syncState = app => app.window.Sync.status().state;
+const MINUTES_INPUT = 'input[aria-label="Длительность сессии в минутах"]';
+
+// A device that remembers a wrong PIN for a name another device owns: the sync when the app
+// opens is rejected, and the device forgets the Profile.
+async function deviceWithRejectedProfile(t, hash) {
+  const c = cloud();
+  const owner = device(t, c, { progress: lessonOneProgress() });
+  await connect(owner);
+  await synced(owner);
+  return device(t, c, { hash, progress: lessonOneProgress(), syncConfig: { name: NAME, pin: '0000' } });
+}
 
 test('sync: with a remembered Profile there is no file backup reminder, wherever the app opens', async t => {
   for (const [where, progress] of [
@@ -502,12 +516,11 @@ test('sync: with a remembered Profile there is no file backup reminder, wherever
       const label = `${where}, ${hash}`;
       assert.doesNotMatch(app.text('main'), BACKUP_REMINDER, `${label}: no reminder as the app opens`);
       assert.equal(gearMarked(app), false, `${label}: the gear is not marked as the app opens`);
-      // The home screen has no Sync status: wait until the progress is on the server.
-      await eventually(async () => (await c.stored()).progress, 3000, `${label}: never synced`);
-      await sleep(30);
+      await app.waitFor(() => syncState(app) === 'ok', 3000);
+      assert.ok((await c.stored()).progress, `${label}: the progress is on the server`);
       assert.doesNotMatch(app.text('main'), BACKUP_REMINDER, `${label}: no reminder after the sync`);
       assert.equal(gearMarked(app), false, `${label}: the gear is not marked after the sync`);
-      assert.equal(app.$('header a[href="#/settings"]').getAttribute('aria-label'), 'Настройки', label);
+      assert.equal(gear(app).getAttribute('aria-label'), 'Настройки', label);
     }
   }
 });
@@ -516,27 +529,89 @@ test('sync: a Profile remembered while offline also hides the file backup remind
   const c = cloud();
   c.setOffline(true);
   const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN } });
-  await sleep(50); // the sync attempt on opening has failed by now
+  await app.waitFor(() => syncState(app) === 'offline');
   assert.doesNotMatch(app.text('main'), BACKUP_REMINDER);
   assert.equal(gearMarked(app), false);
+});
+
+test('sync: connecting while offline also hides the file backup reminder', async t => {
+  const c = cloud();
+  c.setOffline(true);
+  const app = device(t, c, { hash: '#/settings', progress: lessonOneProgress() });
+  assert.match(app.text('main'), /ни разу не сохранялся/, 'without a Profile the settings page warns');
+
+  await connect(app);
+  await app.waitFor(() => /нет связи/i.test(app.text('.sync-status')));
+  assert.deepEqual(app.syncConfig(), { name: NAME, pin: PIN }, 'the Profile is remembered');
+  assert.doesNotMatch(app.text('main'), BACKUP_REMINDER);
+  assert.equal(gearMarked(app), false);
+  assert.match(app.text('main'), /дополнительная копия/);
 });
 
 test('sync: connecting hides the file backup reminder at once, disconnecting brings it back', async t => {
   const app = device(t, cloud(), { hash: '#/settings', progress: lessonOneProgress() });
   assert.match(app.text('main'), /ни разу не сохранялся/, 'without a Profile the settings page warns');
   assert.ok(gearMarked(app), 'without a Profile the gear is marked');
+  const minutes = app.$(MINUTES_INPUT);
 
   await connect(app);
   await synced(app);
   assert.doesNotMatch(app.text('main'), BACKUP_REMINDER, 'the settings page stops warning right after connecting');
   assert.equal(gearMarked(app), false, 'the gear mark is cleared right after connecting');
   assert.match(app.text('main'), /дополнительная копия/);
+  assert.equal(app.$(MINUTES_INPUT), minutes, 'connecting updates the settings page in place, without re-drawing it');
 
   app.byText('.sync button', 'Отключить').click();
   await app.waitFor(() => /ни разу не сохранялся/.test(app.text('main')));
   assert.ok(gearMarked(app), 'the gear is marked again after disconnecting');
-  assert.ok(app.$('.sync input[name="sync-name"]'), 'the Sync form is back');
+  assert.equal(app.$('.sync-form').hidden, false, 'the Sync form is back');
+  assert.match(app.text('main'), /хранится только в этом браузере/);
+  assert.doesNotMatch(app.text('main'), /дополнительная копия/);
+  assert.equal(app.$(MINUTES_INPUT), minutes, 'disconnecting updates the settings page in place, without re-drawing it');
 
   await app.go('#/');
   assert.match(app.text('main .warn'), /ни разу не сохранялся/, 'the home screen warns again');
+});
+
+// A rejected remembered PIN makes the device forget its Profile in the background, while the
+// learner may be busy on any screen: the reminder comes back without the screen being re-drawn.
+
+test('sync: a rejected Profile brings the reminder back on the settings page, keeping what is being typed', async t => {
+  const app = await deviceWithRejectedProfile(t, '#/settings');
+  assert.doesNotMatch(app.text('main'), BACKUP_REMINDER, 'no reminder while the Profile is remembered');
+  const minutes = app.$(MINUTES_INPUT);
+  minutes.focus();
+  minutes.value = '33'; // typed, not yet committed with a change event
+
+  await app.waitFor(() => /неверный PIN/i.test(app.text('.sync-status')), 3000);
+  assert.equal(app.syncConfig(), null, 'the rejected Profile is forgotten');
+  assert.match(app.text('main .warn'), /ни разу не сохранялся/, 'the reminder is back');
+  assert.match(app.text('main'), /хранится только в этом браузере/);
+  assert.ok(gearMarked(app), 'the gear is marked');
+  assert.equal(app.$(MINUTES_INPUT), minutes, 'the settings page is not re-drawn');
+  assert.equal(app.document.activeElement, minutes, 'the field keeps the focus');
+  assert.equal(minutes.value, '33', 'the field keeps what was typed');
+});
+
+test('sync: a rejected Profile brings the reminder back on the home screen without re-drawing it', async t => {
+  const app = await deviceWithRejectedProfile(t, '#/');
+  assert.doesNotMatch(app.text('main'), BACKUP_REMINDER, 'no reminder while the Profile is remembered');
+  const lessons = app.$('.lessons');
+
+  await app.waitFor(() => syncState(app) === 'wrong-pin', 3000);
+  assert.match(app.text('main .warn'), /ни разу не сохранялся/, 'the reminder is back');
+  assert.ok(gearMarked(app), 'the gear is marked');
+  assert.equal(app.$('.lessons'), lessons, 'the home screen is not re-drawn');
+});
+
+test('sync: a rejected Profile marks the gear during a Lesson, leaving the Lesson alone', async t => {
+  const app = await deviceWithRejectedProfile(t, '#/lesson/1');
+  assert.equal(gearMarked(app), false, 'the gear is not marked while the Profile is remembered');
+  const screen = app.$('main').firstElementChild;
+
+  await app.waitFor(() => syncState(app) === 'wrong-pin', 3000);
+  assert.ok(gearMarked(app), 'the gear is marked');
+  assert.equal(gear(app).getAttribute('aria-label'), 'Настройки: прогресс не сохранён в файл');
+  assert.equal(app.$('main').firstElementChild, screen, 'the Lesson is not re-drawn');
+  assert.equal(app.window.location.hash, '#/lesson/1');
 });
