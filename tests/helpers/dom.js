@@ -8,14 +8,11 @@ const ROOT = path.join(__dirname, '..', '..');
 const KEY = 'spanish-trainer:v1';
 const SYNC_KEY = 'spanish-trainer:sync';
 const SYNC_SCRIPTS = ['js/merge.js', 'js/sync.js'];
-const SCRIPTS = [
-  'data/lessons.js', 'data/audio.js', 'js/srs.js', 'js/diff.js', 'js/storage.js',
-  ...SYNC_SCRIPTS, 'js/speech.js', 'js/app.js',
-];
+const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+// The same scripts, in the same order, as index.html loads.
+const SCRIPTS = Array.from(read('index.html').matchAll(/<script src="([^"]+)"><\/script>/g), m => m[1]);
 const START = new Date(2026, 10, 23, 18, 30).getTime();
 const DAY = 24 * 60 * 60 * 1000;
-
-const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function boot({
@@ -85,9 +82,10 @@ function boot({
   w.HTMLMediaElement.prototype.pause = function () {};
 
   const alerts = [];
+  const confirms = [];
   let confirmAnswer = true;
   w.alert = m => alerts.push(String(m));
-  w.confirm = () => confirmAnswer;
+  w.confirm = m => { confirms.push(String(m)); return confirmAnswer; };
   w.scrollTo = () => {};
   w.Element.prototype.scrollIntoView = function () {};
   w.URL.createObjectURL = () => 'blob:test';
@@ -115,6 +113,7 @@ function boot({
     spoken,
     played,
     alerts,
+    confirms,
     errors,
     $,
     $$,

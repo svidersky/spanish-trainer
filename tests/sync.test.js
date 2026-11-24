@@ -391,3 +391,70 @@ test('sync: without an override the app syncs with the deployed Worker', async t
   assert.ok(app.$('.sync'), 'the Sync panel is on the home screen');
   assert.equal(c.calls[0].url, 'https://spanish-progress.spanish-trainer.workers.dev/load');
 });
+
+// ---------- interface language ----------
+
+const CYRILLIC = /[Ѐ-ӿ]/;
+
+function chooseLanguage(app, lang) {
+  const select = app.$('header select');
+  select.value = lang;
+  select.dispatchEvent(new app.window.Event('change'));
+}
+
+async function connectEn(app, name = NAME, pin = PIN) {
+  app.$('.sync input[name="sync-name"]').value = name;
+  app.$('.sync input[name="sync-pin"]').value = pin;
+  app.$('.sync button.primary').click();
+}
+
+function russianIn(app, selector) {
+  const el = app.$(selector);
+  const bits = [el.textContent];
+  for (const e of [el, ...el.querySelectorAll('*')]) {
+    for (const a of ['title', 'aria-label', 'placeholder']) if (e.getAttribute(a)) bits.push(e.getAttribute(a));
+  }
+  return bits.filter(s => CYRILLIC.test(s));
+}
+
+test('sync: in English the Sync panel and its messages are English', async t => {
+  const c = cloud();
+  const settings = { sessionMinutes: 15, lang: 'en' };
+  const a = device(t, c, { progress: lessonOneProgress({ settings }) });
+  assert.deepEqual(russianIn(a, '.sync'), [], 'the form');
+  await connectEn(a, 'x', PIN);
+  await a.waitFor(() => a.text('.sync-status'));
+  assert.deepEqual(russianIn(a, '.sync'), [], 'name check');
+  await connectEn(a, NAME, '12');
+  await a.waitFor(() => /PIN/.test(a.text('.sync-status')));
+  assert.deepEqual(russianIn(a, '.sync'), [], 'PIN check');
+  await connectEn(a);
+  await a.waitFor(() => /synced/i.test(a.text('.sync-status')), 3000);
+  assert.deepEqual(russianIn(a, '.sync'), [], 'connected');
+
+  const b = device(t, c, { progress: { completedLessons: [], cards: {}, settings } });
+  await connectEn(b, NAME, '0000');
+  await b.waitFor(() => /PIN/.test(b.text('.sync-status')) && !b.$('.sync-status').textContent.includes('…'), 3000);
+  assert.deepEqual(russianIn(b, '.sync'), [], 'wrong PIN');
+
+  c.setOffline(true);
+  const off = device(t, c, { progress: { completedLessons: [], cards: {}, settings } });
+  await connectEn(off);
+  await off.waitFor(() => off.text('.sync-status') && !/…/.test(off.text('.sync-status')));
+  assert.deepEqual(russianIn(off, '.sync'), [], 'offline');
+});
+
+test('sync: the language chosen on one device reaches the other', async t => {
+  const c = cloud();
+  const a = device(t, c, { progress: lessonOneProgress() });
+  await connect(a);
+  await synced(a);
+  a.advance(1000);
+  chooseLanguage(a, 'en');
+  await eventually(async () => (await c.stored()).progress.settings.lang === 'en', 3000, 'English never reached the server');
+
+  const b = device(t, c, { syncConfig: { name: NAME, pin: PIN } });
+  await b.waitFor(() => b.$('header select').value === 'en', 3000);
+  await b.waitFor(() => b.text('main h1') === 'Learn Spanish');
+  assert.equal(b.document.documentElement.lang, 'en');
+});

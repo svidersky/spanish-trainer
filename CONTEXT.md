@@ -2,12 +2,12 @@
 
 A personal Spanish trainer (Spain variant, es-ES) for a single learner whose native language is Russian. It combines two methods: flashcards with spaced repetition and Assimil-style lessons.
 
-The learner-facing interface is in Russian. The Russian label the learner sees is given in parentheses after each term.
+The learner-facing interface is in Russian by default and can be switched to English (see Interface language). The Russian label the learner sees is given in parentheses after each term.
 
 ## Glossary
 
 **Lesson** («Урок»)
-A short Assimil-style dialogue of 5–10 Phrases, with the Spanish text and the Russian translation side by side and a few notes. The learner listens to each Phrase and repeats it aloud during the pause after it is spoken. There is no active "second wave" as in Assimil; Production Cards play that role.
+A short Assimil-style dialogue of 5–10 Phrases, with the Spanish text and its translation into the Interface language side by side and a few notes. The learner listens to each Phrase and repeats it aloud during the pause after it is spoken. There is no active "second wave" as in Assimil; Production Cards play that role.
 
 **Completed** («Пройден»)
 The learner marks a Lesson as Completed themselves. At that moment all of the Lesson's Phrases are added to the Deck. Phrases from Lessons that are not Completed never enter the Deck.
@@ -27,8 +27,11 @@ A name and a 4-digit PIN under which one learner's progress is kept on the Sync 
 **Sync** («Синхронизация»)
 Bringing this device's progress and the Profile's copy on the server together. Sync merges rather than overwrites: for each Card the more recent answer wins, Completed Lessons from both sides are kept, and settings come from whichever side changed them last. It runs when the app opens and shortly after every change.
 
+**Interface language** («Язык интерфейса»)
+The learner's own language, in which the trainer speaks to them: Russian (the default) or English. It is chosen in a dropdown in the header on every screen and changes the interface texts, the translations, the Lesson notes and the Transcription. It is a setting, so Sync carries it to the Profile's other devices. Spanish is never translated.
+
 **Phrase** («Фраза»)
-A unit of learning material: the Spanish text, its Transcription, the Russian translation, and es-ES audio. Cards are built from Phrases.
+A unit of learning material: the Spanish text, its Transcription, its translation (Russian and English), and es-ES audio. Cards are built from Phrases.
 
 **Speaker**
 Which of the two dialogue roles says a Phrase: male (*m*) or female (*f*). It decides the voice of the Phrase's Recording and must agree with the Phrase's grammar (*encantado* vs *encantada*).
@@ -37,12 +40,14 @@ Which of the two dialogue roles says a Phrase: male (*m*) or female (*f*). It de
 A pre-made audio file of a Phrase, synthesized offline in the Speaker's voice. A Recording belongs to the exact text it was made from; when the Phrase's text changes, the old Recording is no longer used. Without a usable Recording, the browser's own voice speaks the Phrase.
 
 **Transcription** («Транскрипция»)
-The pronunciation of a Spanish Phrase written in Russian (Cyrillic) letters, with the stressed vowel marked. It is shown in parentheses right after the Spanish text: «¿Dónde está el baño? (до́ндэ эста́ эль ба́ньо?)». In a Lesson the Transcription is always visible. On a Card of either direction it appears only after the Answer, together with the correct text.
+The pronunciation of a Spanish Phrase written in the letters of the Interface language, with the stress marked. In Russian it uses Cyrillic letters with the stressed vowel marked; in English, Latin letters in hyphen-joined syllables with the stressed syllable in capitals. It is shown in parentheses right after the Spanish text: «¿Dónde está el baño? (до́ндэ эста́ эль ба́ньо?)», "¿Dónde está el baño? (DOHN-deh ehs-TAH ehl BAH-nyoh?)". In a Lesson the Transcription is always visible. On a Card of either direction it appears only after the Answer, together with the correct text.
 
 **Card** («Карточка»)
 One direction of testing one Phrase, with its own progress. Every Phrase has two Cards:
 - **Recognition** («Узнавание», ES → RU): you see or hear the Spanish and recall the meaning.
-- **Production** («Воспроизведение», RU → ES): you see the Russian and recall the Spanish.
+- **Production** («Воспроизведение», RU → ES): you see the translation and recall the Spanish.
+
+In English the directions read ES → EN and EN → ES.
 
 The progress of one Card does not affect the other Card of the same Phrase.
 

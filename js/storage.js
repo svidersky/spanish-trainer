@@ -3,13 +3,15 @@
   'use strict';
 
   const KEY = 'spanish-trainer:v1';
+  // Interface languages (see js/i18n.js); the first one is the default.
+  const LANGS = ['ru', 'en'];
 
   function empty() {
     return {
       version: 1,
       completedLessons: [],
       cards: {},
-      settings: { sessionMinutes: 15, practiceCards: 20 },
+      settings: { sessionMinutes: 15, practiceCards: 20, lang: LANGS[0] },
       settingsUpdatedAt: null,
       lastExport: null,
     };
@@ -18,11 +20,13 @@
   function normalize(s) {
     const e = empty();
     if (!s || typeof s !== 'object') return e;
+    const settings = Object.assign(e.settings, s.settings && typeof s.settings === 'object' ? s.settings : {});
+    if (!LANGS.includes(settings.lang)) settings.lang = LANGS[0];
     return {
       version: 1,
       completedLessons: Array.isArray(s.completedLessons) ? s.completedLessons.filter(Number.isFinite) : [],
       cards: s.cards && typeof s.cards === 'object' ? s.cards : {},
-      settings: Object.assign(e.settings, s.settings && typeof s.settings === 'object' ? s.settings : {}),
+      settings,
       settingsUpdatedAt: Number.isFinite(s.settingsUpdatedAt) ? s.settingsUpdatedAt : null,
       lastExport: Number.isFinite(s.lastExport) ? s.lastExport : null,
     };

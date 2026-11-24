@@ -128,3 +128,69 @@ test('Spanish phrases are not repeated', () => {
     seen.set(p.es, p.id);
   }
 });
+
+// ---------- English (the interface language can be English) ----------
+
+const CYRILLIC = /[Ѐ-ӿ]/;
+
+test('every lesson has an English subtitle and as many English notes as Russian ones', () => {
+  for (const l of LESSONS) {
+    assert.equal(typeof l.en, 'string', `lesson ${l.n}: missing English subtitle`);
+    assert.ok(l.en.trim().length > 0, `lesson ${l.n}: empty English subtitle`);
+    assert.ok(Array.isArray(l.notesEn), `lesson ${l.n}: missing English notes`);
+    assert.equal(l.notesEn.length, l.notes.length, `lesson ${l.n}: English notes do not match the Russian ones`);
+    for (const note of l.notesEn) assert.ok(typeof note === 'string' && note.trim(), `lesson ${l.n}: empty English note`);
+  }
+});
+
+test('every phrase has an English translation and an English Transcription', () => {
+  for (const p of PHRASES) {
+    for (const k of ['en', 'trEn']) {
+      assert.equal(typeof p[k], 'string', `${p.id}.${k}`);
+      assert.ok(p[k].trim().length > 0, `${p.id}.${k} is empty`);
+      assert.equal(p[k], p[k].trim(), `${p.id}.${k}: leading or trailing whitespace`);
+    }
+  }
+});
+
+test('English lesson content has no Russian in it', () => {
+  for (const l of LESSONS) {
+    for (const s of [l.en, ...l.notesEn]) assert.doesNotMatch(s, CYRILLIC, `lesson ${l.n}: «${s}»`);
+  }
+  for (const p of PHRASES) {
+    assert.doesNotMatch(p.en, CYRILLIC, `${p.id}.en`);
+    assert.doesNotMatch(p.trEn, CYRILLIC, `${p.id}.trEn`);
+  }
+});
+
+// English Transcription: Latin letters, syllables joined by hyphens, the stressed syllable in
+// capitals: "Muy bien, gracias." → "mwee byehn, GRAH-thyahs."
+test('an English Transcription uses only Latin letters, hyphens and punctuation', () => {
+  for (const p of PHRASES) assert.match(p.trEn, /^[a-z\s,.!?'-]+$/i, `${p.id}: «${p.trEn}»`);
+});
+
+test('an English Transcription has one word per Russian Transcription word', () => {
+  for (const p of PHRASES) {
+    assert.equal(words(p.trEn).length, words(p.tr).length, `${p.id}: «${p.trEn}» vs «${p.tr}»`);
+  }
+});
+
+test('in an English Transcription a multi-syllable word has exactly one stressed (capital) syllable', () => {
+  for (const p of PHRASES) {
+    for (const w of words(p.trEn)) {
+      const parts = w.split('-');
+      assert.ok(parts.every(s => /^[a-z']+$/.test(s) || /^[A-Z']+$/.test(s)), `${p.id}: mixed case inside a syllable of «${w}»`);
+      assert.ok(parts.every(Boolean), `${p.id}: empty syllable in «${w}»`);
+      const stressed = parts.filter(s => /[A-Z]/.test(s)).length;
+      if (parts.length > 1) assert.equal(stressed, 1, `${p.id}: «${w}» needs exactly one stressed syllable`);
+      else assert.equal(stressed, 0, `${p.id}: one-syllable «${w}» is not marked`);
+    }
+  }
+});
+
+test('an English Transcription ends with the same mark as its Spanish phrase', () => {
+  for (const p of PHRASES) {
+    const last = p.es.at(-1);
+    if (last === '?' || last === '!') assert.equal(p.trEn.at(-1), last, `${p.id}: «${p.trEn}»`);
+  }
+});
