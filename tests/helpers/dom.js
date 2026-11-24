@@ -29,7 +29,7 @@ function boot({
   recordings = true,
   audioFails = false,
   // { fetch, syncConfig, url, debounceMs } — loads the Sync scripts and routes the app's fetch()
-  // to a test server. url: null leaves the Worker address unset (the placeholder in js/sync.js).
+  // to a test server. url: null sets no override, so the app uses its own default address (DEFAULT_URL in js/sync.js).
   sync,
 } = {}) {
   const errors = [];

@@ -8,7 +8,7 @@
 
   const CONFIG_KEY = 'spanish-trainer:sync';
   // The deployed Worker. Tests and local experiments can override it with window.SYNC_URL.
-  const DEFAULT_URL = 'https://spanish-progress.REPLACE_WITH_SUBDOMAIN.workers.dev';
+  const DEFAULT_URL = 'https://spanish-progress.spanish-trainer.workers.dev';
   const NAME_RE = /^[\p{L}\p{N}_-]{2,32}$/u;
   const PIN_RE = /^\d{4}$/;
   const MAX_RETRIES = 5;
@@ -18,7 +18,8 @@
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   const url = () => String(root.SYNC_URL || DEFAULT_URL).replace(/\/$/, '');
-  // Until the Worker's address is filled in, Sync stays switched off and the app works as before.
+  // With a placeholder address (e.g. a copy of the app without its own Worker yet), Sync stays
+  // switched off and the app works as before.
   if (/REPLACE_WITH_SUBDOMAIN/.test(url())) return;
   const debounceMs = () => (Number.isFinite(root.SYNC_DEBOUNCE_MS) ? root.SYNC_DEBOUNCE_MS : 2000);
 
