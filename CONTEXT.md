@@ -41,7 +41,7 @@ The progress of one Card does not affect the other Card of the same Phrase.
 What the learner does before seeing the correct text. For Recognition, the learner answers silently or aloud. For Production, the learner types the Spanish text; the trainer highlights the differences from the correct text but does not judge it.
 
 **Grade** («Оценка»)
-The learner's self-assessment after the Answer: *again / hard / good / easy* («забыл / трудно / нормально / легко»). It is always given by the learner, never by the trainer. It decides when the Card is shown next (SM-2 algorithm, as in Anki).
+The learner's self-assessment after the Answer: *again / hard / good / easy* («забыл / трудно / нормально / легко»). It is always given by the learner, never by the trainer. It decides when the Card is shown next, and it matters from the very first answer: *again* brings the Card back in the same Session, while *hard*, *good* and *easy* give a short, medium and long wait. After that, each Grade grows the wait at its own rate (SM-2 ease, with Anki's adjustments).
 
 **Learned** («Выучена»)
 The status of a Card whose interval until the next review is 21 days or more. A Learned Card is still reviewed. If a Grade of *again* drops the interval below 21 days, the status is removed. There is no separate "problem card" status: difficult Cards are simply shown more often by SM-2.

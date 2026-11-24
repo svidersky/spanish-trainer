@@ -13,19 +13,50 @@ test('a new card is due immediately', () => {
   assert.ok(!SRS.isLearned(c));
 });
 
-test('consecutive "good" grades: 1 → 6 → ~15 days', () => {
+test('first answer: each grade gives its own interval (1 / 3 / 7 days)', () => {
+  const at = g => SRS.review(SRS.newCard(NOW), g, NOW).interval;
+  assert.deepEqual(['again', 'hard', 'good', 'easy'].map(at), [1, 1, 3, 7]);
+});
+
+test('consecutive "good" grades: 3 → 8 → 20 → 50 days', () => {
   let c = SRS.newCard(NOW);
-  c = SRS.review(c, 'good', NOW);
+  const seen = [];
+  for (let i = 0; i < 4; i++) {
+    c = SRS.review(c, 'good', c.due);
+    seen.push(c.interval);
+  }
+  assert.deepEqual(seen, [3, 8, 20, 50]);
+});
+
+test('consecutive "easy" grades make a card Learned on the second review', () => {
+  let c = SRS.review(SRS.newCard(NOW), 'easy', NOW);
+  assert.equal(c.interval, 7);
+  c = SRS.review(c, 'easy', c.due);
+  assert.equal(c.interval, 24); // 7 × 2.6 × 1.3
+  assert.ok(SRS.isLearned(c));
+});
+
+test('on a review card hard < good < easy, all longer than before', () => {
+  const card = { ef: 2.5, reps: 3, interval: 10, lapses: 0, due: NOW, last: null };
+  const [hard, good, easy] = ['hard', 'good', 'easy'].map(g => SRS.review(card, g, NOW).interval);
+  assert.deepEqual([hard, good, easy], [12, 25, 33]);
+  for (const ease of [1.3, 1.5, 2.5, 3]) {
+    const c = { ...card, ef: ease, interval: 1 };
+    const [h, g, e] = ['hard', 'good', 'easy'].map(x => SRS.review(c, x, NOW).interval);
+    assert.ok(1 < h && h < g && g < e, `ease ${ease}: ${h} ${g} ${e}`);
+  }
+});
+
+test('a forgotten card starts again from the first-answer intervals', () => {
+  let c = { ef: 2.5, reps: 4, interval: 30, lapses: 0, due: NOW, last: null };
+  c = SRS.review(c, 'again', NOW);
   assert.equal(c.interval, 1);
-  assert.equal(c.due, day(1));
   c = SRS.review(c, 'good', c.due);
-  assert.equal(c.interval, 6);
-  c = SRS.review(c, 'good', c.due);
-  assert.equal(c.interval, 15); // 6 * 2.5
+  assert.equal(c.interval, 3);
 });
 
 test('due date is the start of a day, not the exact answer time', () => {
-  const c = SRS.review(SRS.newCard(NOW), 'good', NOW);
+  const c = SRS.review(SRS.newCard(NOW), 'hard', NOW);
   assert.equal(new Date(c.due).getHours(), 0);
   assert.ok(!SRS.isDue(c, NOW));
   assert.ok(SRS.isDue(c, day(1) + 1));
