@@ -204,9 +204,16 @@ test('session: "good" saves the SM-2 state', async t => {
   app.grade('Нормально');
   const c = app.progress().cards['l01-01|recog'];
   assert.equal(c.reps, 1);
-  assert.equal(c.interval, 1);
+  assert.equal(c.interval, 3);
   assert.ok(c.due > app.now());
   assert.match(app.text('.session-bar'), /повторено 1/);
+});
+
+test('session: on a new card the grade buttons preview different intervals', async t => {
+  const app = await reviewing(t);
+  app.key(' ');
+  const previews = app.$$('.grades button small').map(s => s.textContent.replace(/^\d · /, ''));
+  assert.deepEqual(previews, ['1 день', '1 день', '3 дня', '7 дней']);
 });
 
 test('session: grades can be given with keys 1–4', async t => {
