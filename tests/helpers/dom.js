@@ -6,7 +6,12 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 
 const ROOT = path.join(__dirname, '..', '..');
 const KEY = 'spanish-trainer:v1';
-const SCRIPTS = ['data/lessons.js', 'data/audio.js', 'js/srs.js', 'js/diff.js', 'js/storage.js', 'js/speech.js', 'js/app.js'];
+const SYNC_KEY = 'spanish-trainer:sync';
+const SYNC_SCRIPTS = ['js/merge.js', 'js/sync.js'];
+const SCRIPTS = [
+  'data/lessons.js', 'data/audio.js', 'js/srs.js', 'js/diff.js', 'js/storage.js',
+  ...SYNC_SCRIPTS, 'js/speech.js', 'js/app.js',
+];
 const START = new Date(2026, 10, 23, 18, 30).getTime();
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -23,6 +28,8 @@ function boot({
   maxTouchPoints = 0,
   recordings = true,
   audioFails = false,
+  // { fetch, syncConfig } — loads the Sync scripts and routes the app's fetch() to a test server.
+  sync,
 } = {}) {
   const errors = [];
   const virtualConsole = new VirtualConsole();
@@ -85,8 +92,16 @@ function boot({
   w.URL.createObjectURL = () => 'blob:test';
   w.URL.revokeObjectURL = () => {};
 
+  if (sync) {
+    w.fetch = sync.fetch;
+    w.SYNC_URL = 'https://sync.test';
+    w.SYNC_DEBOUNCE_MS = 0;
+    if (sync.syncConfig) w.localStorage.setItem(SYNC_KEY, JSON.stringify(sync.syncConfig));
+  }
+
   for (const f of SCRIPTS) {
     if (f === 'data/audio.js' && !recordings) continue;
+    if (SYNC_SCRIPTS.includes(f) && !sync) continue;
     w.eval(read(f));
   }
 
@@ -112,6 +127,7 @@ function boot({
     advance(ms) { now += ms; },
     setConfirm(v) { confirmAnswer = v; },
     progress: () => JSON.parse(w.localStorage.getItem(KEY) || 'null'),
+    syncConfig: () => JSON.parse(w.localStorage.getItem(SYNC_KEY) || 'null'),
     key(k) {
       w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
     },
@@ -166,4 +182,4 @@ function lessonOneProgress(overrides = {}) {
   return { version: 1, completedLessons: [1], cards, settings: { sessionMinutes: 15 }, lastExport: null, ...overrides };
 }
 
-module.exports = { boot, lessonOneProgress, read, START, DAY, KEY };
+module.exports = { boot, lessonOneProgress, read, START, DAY, KEY, SYNC_KEY };
