@@ -158,6 +158,15 @@ button:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px sol
 .grades .again { border-color: var(--bad); }
 .grades .easy { border-color: var(--ok); }
 .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+.hint:empty { display: none; }
+.dont-know { color: var(--muted); }
+
+/* Touch screens: no keyboard shortcuts to mention, and bigger tap targets. */
+@media (hover: none) and (pointer: coarse) {
+  .kbd-hint { display: none; }
+  .card .controls button, .grades button { min-height: 48px; }
+  .card .controls .row button { flex: 1; justify-content: center; }
+}
 
 @media (max-width: 520px) {
   .grades { grid-template-columns: repeat(2, 1fr); }

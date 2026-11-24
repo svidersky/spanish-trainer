@@ -462,7 +462,9 @@
           h('div', { class: 'row' }, playButtons(p)),
         );
         const showBtn = h('button', { class: 'primary', onclick: reveal }, 'Показать ответ');
-        const controls = h('div', { class: 'controls' }, showBtn, h('div', { class: 'hint' }, 'Вспомните перевод в уме или вслух. Пробел — показать ответ.'));
+        const controls = h('div', { class: 'controls' },
+          h('div', { class: 'row' }, showBtn, dontKnowButton(giveUp)),
+          h('div', { class: 'hint' }, 'Вспомните перевод в уме или вслух.', kbdHint(' Пробел — показать ответ.')));
         card.append(controls);
         Speech.say(p);
         showBtn.focus();
@@ -474,6 +476,13 @@
           card.append(answerBlock(p));
           card.append(gradeBar(key));
         }
+
+        function giveUp() {
+          if (!controls.isConnected) return;
+          controls.remove();
+          card.append(answerBlock(p), dontKnowBar(key));
+          Speech.say(p);
+        }
       } else {
         card.append(h('div', { class: 'prompt ru' }, p.ru));
         const input = h('input', {
@@ -484,17 +493,30 @@
           Array.from('áéíóúüñ¿¡').map(ch =>
             h('button', { type: 'button', class: 'key', onclick: () => insertAtCursor(input, ch) }, ch)));
         const checkBtn = h('button', { class: 'primary', onclick: check }, 'Проверить');
-        const controls = h('div', { class: 'controls' }, checkBtn, h('div', { class: 'hint' }, 'Enter — проверить.'));
+        const controls = h('div', { class: 'controls' },
+          h('div', { class: 'row' }, checkBtn, dontKnowButton(giveUp)),
+          h('div', { class: 'hint' }, kbdHint('Enter — проверить.')));
         card.append(input, accents, controls);
         input.focus();
         onKey = e => { if (e.key === 'Enter' && document.activeElement === input) { e.preventDefault(); check(); } };
 
-        function check() {
-          if (input.disabled) return;
+        function close() {
+          if (input.disabled) return false;
           input.disabled = true;
           accents.remove();
           controls.remove();
+          return true;
+        }
+
+        function check() {
+          if (!close()) return;
           card.append(diffBlock(input.value, p.es), answerBlock(p), gradeBar(key));
+          Speech.say(p);
+        }
+
+        function giveUp() {
+          if (!close()) return;
+          card.append(answerBlock(p), dontKnowBar(key));
           Speech.say(p);
         }
       }
@@ -510,9 +532,9 @@
           SRS.GRADES.map((g, i) => {
             const preview = SRS.review(card, g, now).interval;
             return h('button', { class: g, onclick: () => safeGrade(g) },
-              GRADE_LABEL[g], h('small', null, (i + 1) + ' · ' + fmtInterval(preview)));
+              GRADE_LABEL[g], h('small', null, kbdHint((i + 1) + ' · '), fmtInterval(preview)));
           })),
-        h('div', { class: 'hint' }, 'Оцените себя честно. Клавиши 1–4.'),
+        h('div', { class: 'hint' }, 'Оцените себя честно.', kbdHint(' Клавиши 1–4.')),
       );
       onKey = e => {
         const i = ['1', '2', '3', '4'].indexOf(e.key);
@@ -522,13 +544,39 @@
       return bar;
     }
 
-    function grade(key, g) {
+    // "Не знаю": the answer is shown and the Grade is "again" right away; one button moves on.
+    function dontKnowButton(onclick) {
+      return h('button', { class: 'dont-know', onclick }, 'Не знаю');
+    }
+
+    function dontKnowBar(key) {
+      record(key, 'again');
+      const shownAt = Date.now();
+      const nextBtn = h('button', { class: 'primary', onclick: () => next() }, 'Дальше');
+      const bar = h('div', { class: 'controls' },
+        h('p', { class: 'verdict different' }, 'Оценка: «Забыл» — карточка вернётся в этой сессии.'),
+        nextBtn,
+        h('div', { class: 'hint' }, kbdHint('Enter или пробел — дальше.')),
+      );
+      onKey = e => {
+        if ((e.key === 'Enter' || e.key === ' ') && Date.now() - shownAt > 300) { e.preventDefault(); next(); }
+      };
+      setTimeout(() => nextBtn.focus(), 0);
+      return bar;
+    }
+
+    function record(key, g) {
       onKey = null;
       st.cards[key] = SRS.review(st.cards[key], g, Date.now());
       saveOrWarn();
       reviewed++;
       // "again": the Card comes back once more in this same Session.
       if (g === 'again') queue.push(key);
+      updateLeft();
+    }
+
+    function grade(key, g) {
+      record(key, g);
       next();
     }
 
@@ -550,6 +598,11 @@
         ),
       );
     }
+  }
+
+  // Keyboard shortcuts are only mentioned where there is a keyboard (hidden on touch screens by CSS).
+  function kbdHint(text) {
+    return h('span', { class: 'kbd-hint' }, text);
   }
 
   function answerBlock(p) {
