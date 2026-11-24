@@ -20,6 +20,34 @@ If no Spanish voice is found, the trainer shows where to add one for the current
 
 Progress is stored per device and browser. To move it, export it to a file on one device and import it on the other.
 
+## Recordings
+
+Every phrase has a pre-made mp3 in [audio/](audio), listed in [data/audio.js](data/audio.js). The trainer plays the recording and falls back to the browser's voice only when a phrase has no recording, its recording is out of date, or playback fails. Dialogues are voiced by role: the `speaker` field of a phrase (`m`/`f`) picks the voice.
+
+Recordings are synthesized offline with [Piper](https://github.com/OHF-Voice/piper1-gpl):
+
+| Speaker | Piper voice |
+|---|---|
+| `m` | `es_ES-sharvard-medium`, speaker 0 ("M") |
+| `f` | `es_ES-sharvard-medium`, speaker 1 ("F") |
+
+**Voice credit:** the `es_ES-sharvard-medium` voice was trained on the [Sharvard corpus](https://datashare.ed.ac.uk/handle/10283/574) (Aubanel, García Lecumberri, Cooke; University of Edinburgh), licensed [CC BY 3.0](http://creativecommons.org/licenses/by/3.0/), and fine-tuned from Piper's `hifi_tts_92` base voice.
+
+Only the generated mp3 files are in this repository; the Piper engine (GPL-3.0) and the voice models are not.
+
+### Regenerating after editing lessons
+
+You need Python 3.11–3.14 (onnxruntime has no wheels for newer versions yet) and ffmpeg.
+
+```
+python -m venv .venv-piper
+.venv-piper/Scripts/python -m pip install -r tools/requirements.txt
+.venv-piper/Scripts/python -m piper.download_voices --data-dir <voices-dir> es_ES-sharvard-medium
+.venv-piper/Scripts/python tools/generate_audio.py --voices-dir <voices-dir>
+```
+
+Only new or changed phrases are re-recorded. A test fails if any phrase lacks an up-to-date recording.
+
 ## Progress
 
 Progress lives in the browser (localStorage) and is lost if you clear the browser's data. Click **«Сохранить прогресс в файл»** (save progress to a file) from time to time. You can keep that file in the cloud and load it back with **«Загрузить из файла»** (load from a file). The trainer reminds you if more than a week has passed since the last save.
