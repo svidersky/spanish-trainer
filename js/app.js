@@ -130,10 +130,13 @@
 
   let cleanup = null;
 
+  // '#/lesson/3' -> ['lesson', '3']; the home screen is [].
+  const routeParts = () => (location.hash.slice(1) || '/').split('/').filter(Boolean);
+
   function route() {
     if (cleanup) { cleanup(); cleanup = null; }
     Speech.stop();
-    const parts = (location.hash.slice(1) || '/').split('/').filter(Boolean);
+    const parts = routeParts();
     $app.replaceChildren();
     window.scrollTo(0, 0);
     if (parts[0] === 'lesson') renderLesson(parts[1]);
@@ -184,8 +187,7 @@
       onchange: e => {
         const n = Number(e.target.value);
         const v = e.target.value.trim() !== '' && Number.isFinite(n) ? Math.min(120, Math.max(1, Math.round(n))) : 15;
-        st.settings.sessionMinutes = v;
-        st.settingsUpdatedAt = Date.now();
+        Store.setSetting('sessionMinutes', v);
         saveOrWarn();
         route();
       },
@@ -245,8 +247,7 @@
   // a review Session holds the same progress object, which Sync updates in place).
   if (window.Sync) {
     Sync.onData(() => {
-      const parts = (location.hash.slice(1) || '/').split('/').filter(Boolean);
-      if (!parts.length) route();
+      if (!routeParts().length) route();
     });
   }
 

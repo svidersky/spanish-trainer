@@ -5,7 +5,7 @@
   'use strict';
 
   const answeredAt = card => (card && Number.isFinite(card.last) ? card.last : -Infinity);
-  const time = t => (Number.isFinite(t) ? t : -Infinity);
+  const timeOrOldest = t => (Number.isFinite(t) ? t : -Infinity);
 
   function merge(local, remote) {
     if (!remote || typeof remote !== 'object') return local;
@@ -19,7 +19,7 @@
     const lessons = new Set([...(local.completedLessons || []), ...(remote.completedLessons || [])]);
     const completedLessons = [...lessons].filter(Number.isFinite).sort((a, b) => a - b);
 
-    const remoteSettingsNewer = time(remote.settingsUpdatedAt) > time(local.settingsUpdatedAt);
+    const remoteSettingsNewer = timeOrOldest(remote.settingsUpdatedAt) > timeOrOldest(local.settingsUpdatedAt);
     const settingsSide = remoteSettingsNewer ? remote : local;
 
     const exports = [local.lastExport, remote.lastExport].filter(Number.isFinite);

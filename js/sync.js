@@ -28,7 +28,7 @@
   const statusListeners = new Set();
   const dataListeners = new Set();
   let running = null;
-  let again = false;
+  let syncAgainAfterRun = false; // a change arrived while a sync was running
   let timer = null;
 
   function readConfig() {
@@ -117,13 +117,13 @@
   function syncNow() {
     if (!config) return Promise.resolve(false);
     if (running) {
-      again = true;
+      syncAgainAfterRun = true;
       return running;
     }
     running = run(config).finally(() => {
       running = null;
-      if (again) {
-        again = false;
+      if (syncAgainAfterRun) {
+        syncAgainAfterRun = false;
         syncNow();
       }
     });

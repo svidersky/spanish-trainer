@@ -17,8 +17,9 @@ const CORS = {
   'Access-Control-Max-Age': '86400',
 };
 
-const json = (status, body) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
+const respond = (status, jsonText) =>
+  new Response(jsonText, { status, headers: { 'Content-Type': 'application/json', ...CORS } });
+const json = (status, body) => respond(status, JSON.stringify(body));
 
 export async function route(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -49,7 +50,7 @@ export async function route(request, env) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(forward),
   }));
-  return new Response(await res.text(), { status: res.status, headers: { 'Content-Type': 'application/json', ...CORS } });
+  return respond(res.status, await res.text());
 }
 
 export default { fetch: route };

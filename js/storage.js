@@ -68,6 +68,12 @@
       if (silent) return write();
       return Store.save();
     },
+    // Changes a setting and notes when, so Sync can tell which device changed settings last.
+    // Call save() afterwards, as for any other change.
+    setSetting(name, value) {
+      state.settings[name] = value;
+      state.settingsUpdatedAt = Date.now();
+    },
     onSave(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     looksLikeProgress(data) {
       return !!data && typeof data === 'object' && typeof data.cards === 'object' && Array.isArray(data.completedLessons);
