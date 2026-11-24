@@ -178,7 +178,7 @@ test('two saves racing to create the same Profile: one wins, the other gets 409'
   const loser = results.find(r => r.status === 409);
   const loaded = await call('/load', { name: 'leonid', pin: '4831' });
   assert.equal(loaded.body.version, 1);
-  assert.deepEqual(loser.body, loaded.body, 'the loser is handed the winner's copy to merge');
+  assert.deepEqual(loser.body, loaded.body, "the loser is handed the winner's copy to merge");
 });
 
 test('two saves racing at the same version of an existing Profile: exactly one is applied', async () => {
