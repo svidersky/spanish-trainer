@@ -190,6 +190,59 @@ test('session: Recognition first; answer and Transcription hidden until revealed
   assert.match(app.text('.card .answer-block'), /Привет! Как дела\?/);
 });
 
+test('session: "Не знаю" on Recognition shows the answer and grades "again" at once', async t => {
+  const app = await reviewing(t);
+  app.byText('.card button', 'Не знаю').click();
+  assert.ok(app.$('.card .answer-block'), 'the answer is shown');
+  assert.ok(app.$('.card .tr'), 'with its Transcription');
+  assert.equal(app.$('.card .grades'), null, 'no grade buttons: the grade is already given');
+  const c = app.progress().cards['l01-01|recog'];
+  assert.equal(c.lapses, 1);
+  assert.equal(c.reps, 0);
+  assert.match(app.text('.session-bar'), /повторено 1/);
+  app.byText('.card button', 'Дальше').click();
+  assert.equal(app.text('.card .prompt'), 'Muy bien, gracias. ¿Y tú?');
+  // 14 untouched cards + the current one + the requeued one
+  assert.match(app.text('.session-bar'), /осталось 16/, 'the card went back into the queue');
+});
+
+test('session: "Не знаю" on Production shows the answer without a diff', async t => {
+  const app = await reviewing(t);
+  for (let i = 0; i < 8; i++) {
+    app.key(' ');
+    app.grade('Нормально');
+  }
+  app.byText('.card button', 'Не знаю').click();
+  assert.ok(app.$('.card input.answer').disabled);
+  assert.equal(app.$('.diff'), null);
+  assert.match(app.text('.card .answer-block'), /¡Hola! ¿Qué tal\?/);
+  assert.equal(app.progress().cards['l01-01|produce'].lapses, 1);
+  assert.ok(app.byText('.card button', 'Дальше'));
+});
+
+test('session: after "Не знаю", Enter moves on only after the bounce guard', async t => {
+  const app = await reviewing(t);
+  app.byText('.card button', 'Не знаю').click();
+  app.key('Enter');
+  assert.match(app.text('.card .prompt'), /¡Hola!/, 'an immediate Enter is ignored');
+  app.advance(400);
+  app.key('Enter');
+  assert.equal(app.text('.card .prompt'), 'Muy bien, gracias. ¿Y tú?');
+});
+
+test('session: keyboard shortcuts are mentioned only inside .kbd-hint (hidden on touch screens)', async t => {
+  const app = await reviewing(t);
+  const outside = el => {
+    const copy = el.cloneNode(true);
+    copy.querySelectorAll('.kbd-hint').forEach(k => k.remove());
+    return copy.textContent;
+  };
+  assert.doesNotMatch(outside(app.$('.card')), /Пробел|Enter|Клавиш/);
+  app.key(' ');
+  assert.doesNotMatch(outside(app.$('.card')), /Пробел|Enter|Клавиш|\d · /);
+  assert.match(app.text('.card .grades'), /1 · /, 'desktop still sees the key numbers');
+});
+
 test('session: a grade right after revealing is ignored (double-press guard)', async t => {
   const app = await reviewing(t);
   app.key(' ');
