@@ -73,10 +73,13 @@ Requires Node.js 22.22.2+, 24.15.0+ or 26+ (the minimum for jsdom 31):
 ```
 npm install
 npm test
+npm run lint
 ```
+
+`npm run lint` runs ESLint ([eslint.config.js](eslint.config.js)) over the app, the tests and the Sync server.
 
 - [tests/core.test.js](tests/core.test.js) covers the SM-2 scheduler and answer comparison.
 - [tests/lessons.test.js](tests/lessons.test.js) checks lesson data: unique ids, stress marks in transcriptions, paired ¿? and ¡! marks.
 - [tests/ui.test.js](tests/ui.test.js) runs the screens in jsdom: home and the settings page, lessons, marking a lesson completed, a session with both card directions, the timer, Practice over not-yet-Learned cards, export and import, and voice selection.
 
-GitHub Actions runs the tests on every pull request and on every push to `main` ([.github/workflows/test.yml](.github/workflows/test.yml)), on Node 24 LTS.
+GitHub Actions runs the tests on every pull request and on every push to `main` ([.github/workflows/test.yml](.github/workflows/test.yml)), on Node 24 LTS, after the linter.

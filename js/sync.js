@@ -36,7 +36,7 @@
     try {
       const c = JSON.parse(root.localStorage.getItem(CONFIG_KEY));
       return c && typeof c.name === 'string' && typeof c.pin === 'string' ? c : null;
-    } catch (err) {
+    } catch {
       return null;
     }
   }
@@ -45,7 +45,7 @@
     try {
       if (c) root.localStorage.setItem(CONFIG_KEY, JSON.stringify(c));
       else root.localStorage.removeItem(CONFIG_KEY);
-    } catch (err) { /* private mode: the Profile is just not remembered */ }
+    } catch { /* private mode: the Profile is just not remembered */ }
   }
 
   function setStatus(next) {
@@ -62,8 +62,8 @@
       // keepalive lets a save finish after the page is closed, but only small bodies may use it.
       keepalive: new TextEncoder().encode(text).length <= KEEPALIVE_MAX_BYTES,
     });
-    let data = null;
-    try { data = await res.json(); } catch (err) { data = null; }
+    let data;
+    try { data = await res.json(); } catch { data = null; }
     return { status: res.status, data: data || {} };
   }
 
@@ -109,7 +109,7 @@
       // Still conflicting: try again a little later instead of leaving the change unsent.
       setTimeout(syncNow, 1000 + Math.random() * 2000);
       return false;
-    } catch (err) {
+    } catch {
       setStatus({ state: 'offline' });
       return false;
     }
