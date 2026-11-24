@@ -32,16 +32,12 @@ jobs:
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
           fail: false
-          # Excluded, because they cannot be checked from CI:
-          # - the Sync server answers 404 to a plain GET (it only serves the app's POST API);
-          # - https://profile/ is the Durable Object's internal request URL, not a real host;
-          # - loopback and private addresses.
+          # Links CI cannot check are listed in .lycheeignore (not here: lychee would read
+          # the patterns in this file as links). Loopback and private addresses are skipped.
           args: >-
             --no-progress
             --max-retries 3
             --exclude-all-private
-            --exclude '^https://spanish-progress\.spanish-trainer\.workers\.dev'
-            --exclude '^https://profile/'
             README.md CONTEXT.md CLAUDE.md
             'js/**/*.js' 'worker/**/*.js' 'worker/**/*.jsonc'
             '.github/**/*.yml'

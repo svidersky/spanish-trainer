@@ -1,0 +1,7 @@
+# Links lychee must not check (regular expressions, one per line), because CI cannot check them.
+# Kept here rather than in .github/workflows/links.yml, where lychee would read the patterns as links.
+
+# The Sync server answers 404 to a plain GET: it only serves the app's POST API.
+^https://spanish-progress\.spanish-trainer\.workers\.dev
+# The Durable Object's internal request URL in worker/src/router.js, not a real host.
+^https://profile/
