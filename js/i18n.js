@@ -6,8 +6,9 @@
 
   const LANGS = ['ru', 'en'];
   const DEFAULT = 'ru';
-  // Each language's name is written in that language, so anyone can find their own.
-  const NAMES = { ru: 'Русский', en: 'English' };
+  // Each language's name is written in that language, so anyone can find their own, after its flag
+  // (Windows shows a flag emoji as two letters, RU / GB, which still reads fine).
+  const NAMES = { ru: '🇷🇺 Русский', en: '🇬🇧 English' };
   // Locale for dates, times and plural rules.
   const LOCALE = { ru: 'ru-RU', en: 'en-GB' };
 
