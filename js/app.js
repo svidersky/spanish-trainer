@@ -453,7 +453,7 @@
     const reader = new FileReader();
     reader.onload = () => {
       let data;
-      try { data = JSON.parse(reader.result); } catch (err) { data = null; }
+      try { data = JSON.parse(reader.result); } catch { data = null; }
       if (!Store.looksLikeProgress(data)) {
         alert(t('notAProgressFile'));
         return;

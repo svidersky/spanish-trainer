@@ -28,6 +28,7 @@ jobs:
           node-version: 24
       # Installs exactly what package-lock.json records; fails if it disagrees with package.json.
       - run: npm ci --no-audit --no-fund
+      - run: npm run lint
       - run: npm test
 
   # Lints the workflows themselves: correctness, security (secrets, injection) and policy

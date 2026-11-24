@@ -36,7 +36,7 @@
     try {
       const raw = root.localStorage.getItem(KEY);
       return raw ? normalize(JSON.parse(raw)) : empty();
-    } catch (err) {
+    } catch {
       return empty();
     }
   }
