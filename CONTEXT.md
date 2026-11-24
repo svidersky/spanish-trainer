@@ -18,6 +18,12 @@ All Cards of all Phrases from Completed Lessons. There is a single Deck shared b
 **Session** («Сессия»)
 One time-boxed practice run over the Deck (15 minutes by default). The Cards that have been due the longest come first. When time runs out, the current Card is played through to its Grade and the Session ends. Cards not reached stay in the queue.
 
+**Profile** («Профиль»)
+A name and a 4-digit PIN under which one learner's progress is kept on the Sync server. There is no registration: the first successful sync with a new name creates the Profile with that PIN. After 5 wrong PINs in a row the name is locked for an hour.
+
+**Sync** («Синхронизация»)
+Bringing this device's progress and the Profile's copy on the server together. Sync merges rather than overwrites: for each Card the more recent answer wins, Completed Lessons from both sides are kept, and settings come from whichever side changed them last. It runs when the app opens and shortly after every change.
+
 **Phrase** («Фраза»)
 A unit of learning material: the Spanish text, its Transcription, the Russian translation, and es-ES audio. Cards are built from Phrases.
 

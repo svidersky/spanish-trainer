@@ -1,0 +1,13 @@
+// Cloudflare Worker config (format per https://developers.cloudflare.com/workers/wrangler/configuration/).
+// One SQLite-backed Durable Object per Profile (the only kind on the Workers Free plan,
+// https://developers.cloudflare.com/durable-objects/platform/pricing/).
+{
+  "name": "spanish-progress",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-24",
+  "durable_objects": {
+    "bindings": [{ "name": "PROFILES", "class_name": "ProfileStore" }]
+  },
+  // https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ProfileStore"] }]
+}
