@@ -58,6 +58,24 @@ test('home: session length is clamped to 1–120 minutes', t => {
   assert.equal(set('abc'), 15);
 });
 
+test('home: Practice size is clamped to 1–200 Cards and is a synced setting', t => {
+  const app = setup(t);
+  const field = () => app.$('input[aria-label="Число карточек в тренировке"]');
+  assert.equal(field().value, '20', 'default is 20 Cards');
+  const set = value => {
+    field().value = value;
+    field().dispatchEvent(new app.window.Event('change'));
+    return app.progress().settings.practiceCards;
+  };
+  app.advance(1000);
+  assert.equal(set('0'), 1);
+  assert.equal(set('999'), 200);
+  assert.equal(set('abc'), 20);
+  assert.equal(set('7'), 7);
+  assert.equal(app.progress().settingsUpdatedAt, app.now(), 'Sync must see that settings changed');
+  assert.equal(app.progress().settings.sessionMinutes, 15, 'the Session length is untouched');
+});
+
 // ---------- Lesson ----------
 
 test('lesson: Spanish text and stressed Transcription in parentheses', t => {
@@ -72,7 +90,7 @@ test('lesson: Spanish text and stressed Transcription in parentheses', t => {
 });
 
 test('no screen renders "null", "undefined" or "[object …]"', async t => {
-  for (const hash of ['#/', '#/lesson/1', '#/review']) {
+  for (const hash of ['#/', '#/lesson/1', '#/review', '#/practice']) {
     const app = setup(t, { hash, progress: lessonOneProgress() });
     assert.doesNotMatch(app.text('main'), /\bnull\b|\bundefined\b|\[object /, hash);
   }
@@ -360,6 +378,143 @@ test('session: when cards run out the summary says everything is reviewed', asyn
   assert.match(app.text('main'), /На сегодня всё повторено/);
 });
 
+// ---------- Practice ----------
+
+// Lesson 1 progress where every Card was answered once and is not due for two more days.
+function notDueProgress(overrides) {
+  const progress = lessonOneProgress(overrides);
+  for (const c of Object.values(progress.cards)) {
+    Object.assign(c, { reps: 1, interval: 3, due: START + 2 * DAY, last: START - DAY });
+  }
+  return progress;
+}
+
+// The key ('l01-03|recog') of the Card on screen.
+function shownKey(app) {
+  const phrases = app.window.LESSONS[0].phrases;
+  const prompt = app.text('.card .prompt');
+  const recog = /Узнавание/.test(app.text('.card .dir'));
+  const p = phrases.find(x => (recog ? x.es : x.ru) === prompt);
+  assert.ok(p, 'unknown prompt: ' + prompt);
+  return p.id + '|' + (recog ? 'recog' : 'produce');
+}
+
+async function practicing(t, progress) {
+  const app = setup(t, { hash: '#/practice', progress });
+  await app.waitFor(() => app.$('.card') || /Тренировать нечего/.test(app.text('main')));
+  return app;
+}
+
+const withPracticeCards = n => ({ settings: { sessionMinutes: 15, practiceCards: n } });
+
+test('home: Practice button shows how many Cards it will take, even when nothing is due', t => {
+  const app = setup(t, { progress: notDueProgress() });
+  assert.match(app.text('.panel'), /На сегодня всё повторено/);
+  assert.equal(app.$('a[href="#/review"]'), null);
+  assert.match(app.text('a[href="#/practice"]'), /Потренировать невыученные · 16/);
+
+  const limited = setup(t, { progress: notDueProgress(withPracticeCards(5)) });
+  assert.match(limited.text('a[href="#/practice"]'), /· 5$/);
+});
+
+test('home: no Practice button for an empty Deck or when every Card is Learned', t => {
+  assert.equal(setup(t).$('a[href="#/practice"]'), null);
+  const progress = notDueProgress();
+  for (const c of Object.values(progress.cards)) c.interval = 21;
+  assert.equal(setup(t, { progress }).$('a[href="#/practice"]'), null);
+});
+
+test('practice: nothing to practise when every Card is Learned', async t => {
+  const progress = notDueProgress();
+  for (const c of Object.values(progress.cards)) c.interval = 30;
+  const app = await practicing(t, progress);
+  assert.match(app.text('main'), /Тренировать нечего/);
+});
+
+test('practice: not-yet-Learned Cards only, hardest first, whether due or not', async t => {
+  const progress = notDueProgress();
+  const set = (key, fields) => Object.assign(progress.cards[key], fields);
+  set('l01-07|recog', { ef: 1.3, lapses: 9, interval: 30 }); // Learned: never in Practice
+  set('l01-05|produce', { ef: 1.3, lapses: 3 });             // lowest ease, most lapses
+  set('l01-03|recog', { ef: 1.3, lapses: 1 });
+  set('l01-06|recog', { ef: 2.0 });
+  set('l01-08|produce', { due: START - DAY });                // due now: practised too
+  set('l01-02|produce', { due: START + DAY });                // same ease: the sooner due first
+  const app = await practicing(t, progress);
+  assert.equal(app.$('.timer'), null, 'Practice is not time-boxed');
+
+  const seen = [];
+  while (app.$('.card')) {
+    seen.push(shownKey(app));
+    app.answer('x');
+    app.grade('Нормально');
+  }
+  assert.deepEqual(seen.slice(0, 6),
+    ['l01-05|produce', 'l01-03|recog', 'l01-06|recog', 'l01-08|produce', 'l01-02|produce', 'l01-01|recog']);
+  assert.equal(seen.length, 15);
+  assert.ok(!seen.includes('l01-07|recog'));
+  assert.match(app.text('main'), /Тренировка окончена/);
+  assert.match(app.text('main'), /Пройдено карточек: 15/);
+});
+
+test('practice: takes at most the set number of Cards', async t => {
+  const app = await practicing(t, notDueProgress(withPracticeCards(3)));
+  assert.match(app.text('.session-bar'), /осталось 3/);
+  for (let i = 0; i < 3; i++) {
+    app.answer('x');
+    app.grade('Нормально');
+  }
+  assert.match(app.text('main'), /Тренировка окончена/);
+  assert.match(app.text('main'), /Пройдено карточек: 3/);
+  assert.ok(app.$('main a[href="#/"]'));
+});
+
+test('practice: "hard", "good" and "easy" leave the schedule untouched', async t => {
+  const app = await practicing(t, notDueProgress());
+  const before = clone(app.window.Store.get().cards);
+  for (const label of ['Трудно', 'Нормально', 'Легко']) {
+    app.answer('x');
+    app.grade(label);
+  }
+  assert.deepEqual(clone(app.window.Store.get().cards), before);
+  assert.deepEqual(app.progress().cards, before);
+});
+
+test('practice: grade buttons say that only "again" changes the schedule', async t => {
+  const app = await practicing(t, notDueProgress());
+  app.answer('x');
+  const previews = app.$$('.grades button small').map(s => s.textContent.replace(/^\d · /, ''));
+  assert.deepEqual(previews, ['1 день', 'срок не меняется', 'срок не меняется', 'срок не меняется']);
+});
+
+test('practice: "again" counts as in a Session and the Card comes back beyond the limit', async t => {
+  const app = await practicing(t, notDueProgress(withPracticeCards(2)));
+  const first = shownKey(app);
+  app.answer('x');
+  app.grade('Забыл');
+  const forgotten = app.progress().cards[first];
+  assert.equal(forgotten.lapses, 1);
+  assert.equal(forgotten.interval, 1);
+  assert.equal(forgotten.last, app.now());
+
+  app.answer('x');
+  app.grade('Нормально');
+  assert.equal(shownKey(app), first, 'the forgotten Card comes back after the limit is reached');
+  app.answer('x');
+  app.grade('Нормально');
+  assert.deepEqual(app.progress().cards[first], forgotten, 'the repeat does not grow the interval');
+  assert.match(app.text('main'), /Тренировка окончена/);
+  assert.match(app.text('main'), /Пройдено карточек: 3/);
+});
+
+test('practice: "Не знаю" counts as "again"', async t => {
+  const app = await practicing(t, notDueProgress());
+  const key = shownKey(app);
+  app.byText('.card button', 'Не знаю').click();
+  assert.equal(app.progress().cards[key].lapses, 1);
+  assert.equal(app.progress().cards[key].interval, 1);
+});
+
 // ---------- progress: export and import ----------
 
 test('export: records the save date and removes the reminder', t => {
@@ -410,6 +565,7 @@ test('storage: missing fields get defaults, junk is dropped', t => {
   const st = clone(app.window.Store.get());
   assert.deepEqual(st.completedLessons, [1]);
   assert.equal(st.settings.sessionMinutes, 15);
+  assert.equal(st.settings.practiceCards, 20);
   assert.equal(st.lastExport, null);
 });
 
