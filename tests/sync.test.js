@@ -483,3 +483,57 @@ test('sync: the language chosen on one device reaches the other', async t => {
   await b.waitFor(() => b.text('main h1') === 'Learn Spanish');
   assert.equal(b.document.documentElement.lang, 'en');
 });
+
+// ---------- the file backup reminder with a Profile ----------
+// With a Profile the progress is kept on the Sync server, so the reminder to save a file copy
+// (on the home screen, on the settings page and as the gear's mark) is not shown.
+
+const BACKUP_REMINDER = /сохранялся|сохранение в файл/;
+const gearMarked = app => app.$('header a[href="#/settings"]').classList.contains('attention');
+
+test('sync: with a remembered Profile there is no file backup reminder, wherever the app opens', async t => {
+  for (const [where, progress] of [
+    ['never exported', lessonOneProgress()],
+    ['exported 8 days ago', lessonOneProgress({ lastExport: START - 8 * DAY })],
+  ]) {
+    for (const hash of ['#/', '#/settings']) {
+      const app = device(t, cloud(), { hash, progress, syncConfig: { name: NAME, pin: PIN } });
+      const label = `${where}, ${hash}`;
+      assert.doesNotMatch(app.text('main'), BACKUP_REMINDER, `${label}: no reminder as the app opens`);
+      assert.equal(gearMarked(app), false, `${label}: the gear is not marked as the app opens`);
+      await synced(app);
+      assert.doesNotMatch(app.text('main'), BACKUP_REMINDER, `${label}: no reminder after the sync`);
+      assert.equal(gearMarked(app), false, `${label}: the gear is not marked after the sync`);
+      assert.equal(app.$('header a[href="#/settings"]').getAttribute('aria-label'), 'Настройки', label);
+    }
+  }
+});
+
+test('sync: a Profile remembered while offline also hides the file backup reminder', async t => {
+  const c = cloud();
+  c.setOffline(true);
+  const app = device(t, c, { progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN } });
+  await sleep(50); // the sync attempt on opening has failed by now
+  assert.doesNotMatch(app.text('main'), BACKUP_REMINDER);
+  assert.equal(gearMarked(app), false);
+});
+
+test('sync: connecting hides the file backup reminder at once, disconnecting brings it back', async t => {
+  const app = device(t, cloud(), { hash: '#/settings', progress: lessonOneProgress() });
+  assert.match(app.text('main'), /ни разу не сохранялся/, 'without a Profile the settings page warns');
+  assert.ok(gearMarked(app), 'without a Profile the gear is marked');
+
+  await connect(app);
+  await synced(app);
+  assert.doesNotMatch(app.text('main'), BACKUP_REMINDER, 'the settings page stops warning right after connecting');
+  assert.equal(gearMarked(app), false, 'the gear mark is cleared right after connecting');
+  assert.match(app.text('main'), /дополнительная копия/);
+
+  app.byText('.sync button', 'Отключить').click();
+  await app.waitFor(() => /ни разу не сохранялся/.test(app.text('main')));
+  assert.ok(gearMarked(app), 'the gear is marked again after disconnecting');
+  assert.ok(app.$('.sync input[name="sync-name"]'), 'the Sync form is back');
+
+  await app.go('#/');
+  assert.match(app.text('main .warn'), /ни разу не сохранялся/, 'the home screen warns again');
+});
