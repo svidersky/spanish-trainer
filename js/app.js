@@ -1,4 +1,4 @@
-// Trainer screens: home, Lesson, review Session.
+// Trainer screens: home, Lesson, review Session and Practice.
 // UI strings are learner-facing and therefore Russian.
 (function () {
   'use strict';
@@ -92,7 +92,15 @@
       if (SRS.isDue(cards[k], now)) due++;
       if (SRS.isLearned(cards[k])) learned++;
     }
-    return { due, learned, total };
+    return { due, learned, total, notLearned: total - learned };
+  }
+
+  // Practice order: the hardest Cards first (lowest ease, then most lapses), then the soonest due,
+  // then the Session order.
+  function practiceOrder(a, b) {
+    const cards = Store.get().cards;
+    const ca = cards[a], cb = cards[b];
+    return ca.ef - cb.ef || cb.lapses - ca.lapses || queueOrder(a, b);
   }
 
   // Session order: the longest-overdue Cards first; on a tie Recognition comes before Production,
@@ -140,7 +148,8 @@
     $app.replaceChildren();
     window.scrollTo(0, 0);
     if (parts[0] === 'lesson') renderLesson(parts[1]);
-    else if (parts[0] === 'review') renderReview();
+    else if (parts[0] === 'review') renderReview({ practice: false });
+    else if (parts[0] === 'practice') renderReview({ practice: true });
     else renderHome();
   }
 
@@ -166,6 +175,10 @@
         : s.due === 0
           ? h('p', { class: 'muted' }, 'На сегодня всё повторено. ¡Muy bien!')
           : h('a', { class: 'btn primary', href: '#/review' }, `Начать сессию · ${st.settings.sessionMinutes} мин`),
+      s.notLearned > 0
+        ? h('p', null, h('a', { class: 'btn', href: '#/practice' },
+            `Потренировать невыученные · ${Math.min(s.notLearned, st.settings.practiceCards)}`))
+        : null,
     );
 
     const lessonList = h('ul', { class: 'lessons' },
@@ -181,17 +194,20 @@
     );
 
     // Settings and progress backup
-    const minutes = h('input', {
-      type: 'number', min: '1', max: '120', value: st.settings.sessionMinutes, class: 'answer',
-      style: 'width:90px;font-size:17px;padding:6px 8px', 'aria-label': 'Длительность сессии в минутах',
+    // A whole-number setting clamped to [min, max]; anything unreadable falls back to the default.
+    const numberSetting = (name, min, max, fallback, label) => h('input', {
+      type: 'number', min: String(min), max: String(max), value: st.settings[name], class: 'answer',
+      style: 'width:90px;font-size:17px;padding:6px 8px', 'aria-label': label,
       onchange: e => {
         const n = Number(e.target.value);
-        const v = e.target.value.trim() !== '' && Number.isFinite(n) ? Math.min(120, Math.max(1, Math.round(n))) : 15;
-        Store.setSetting('sessionMinutes', v);
+        const v = e.target.value.trim() !== '' && Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : fallback;
+        Store.setSetting(name, v);
         saveOrWarn();
         route();
       },
     });
+    const minutes = numberSetting('sessionMinutes', 1, 120, 15, 'Длительность сессии в минутах');
+    const practiceSize = numberSetting('practiceCards', 1, 200, 20, 'Число карточек в тренировке');
 
     const fileInput = h('input', { type: 'file', accept: '.json,application/json', hidden: true, onchange: importProgress });
 
@@ -236,6 +252,7 @@
             ? 'Файл — дополнительная копия: прогресс уже синхронизируется.'
             : 'Прогресс хранится только в этом браузере.'),
         h('div', { class: 'row' }, h('label', null, 'Длительность сессии, минут:'), minutes),
+        h('div', { class: 'row' }, h('label', null, 'Карточек в тренировке:'), practiceSize),
         voiceStatus,
       ),
     );
@@ -463,15 +480,20 @@
 
   // ---------- Session ----------
 
-  function renderReview() {
+  function renderReview({ practice }) {
     const st = Store.get();
-    const queue = liveCards().filter(k => SRS.isDue(st.cards[k], Date.now())).sort(queueOrder);
-    document.title = 'Повторение';
+    // A Session takes the due Cards for a set time; a Practice takes a set number of the
+    // not-yet-Learned Cards, due or not.
+    const queue = practice
+      ? liveCards().filter(k => !SRS.isLearned(st.cards[k])).sort(practiceOrder).slice(0, st.settings.practiceCards)
+      : liveCards().filter(k => SRS.isDue(st.cards[k], Date.now())).sort(queueOrder);
+    const title = practice ? 'Тренировка' : 'Повторение';
+    document.title = title;
 
     if (!queue.length) {
       $app.append(
-        h('h1', null, 'Повторение'),
-        h('p', null, 'Сейчас повторять нечего.'),
+        h('h1', null, title),
+        h('p', null, practice ? 'Тренировать нечего: все карточки выучены.' : 'Сейчас повторять нечего.'),
         h('a', { class: 'btn', href: '#/' }, '← На главную'),
       );
       return;
@@ -483,7 +505,7 @@
     let reviewed = 0;
     let onKey = null;
 
-    const timerEl = h('span', { class: 'timer' }, fmtClock(limitMs));
+    const timerEl = practice ? null : h('span', { class: 'timer' }, fmtClock(limitMs));
     const leftEl = h('span');
     const stage = h('div');
 
@@ -496,7 +518,7 @@
         timerEl.textContent = 'время вышло — доделайте карточку';
       }
     };
-    const timer = setInterval(tick, 1000);
+    const timer = practice ? null : setInterval(tick, 1000);
     const keyListener = e => { if (onKey) onKey(e); };
     document.addEventListener('keydown', keyListener);
     cleanup = () => { clearInterval(timer); document.removeEventListener('keydown', keyListener); };
@@ -513,7 +535,7 @@
     next();
 
     function updateLeft() {
-      leftEl.textContent = 'осталось ' + queue.length + ' · повторено ' + reviewed;
+      leftEl.textContent = 'осталось ' + queue.length + (practice ? ' · пройдено ' : ' · повторено ') + reviewed;
     }
 
     function next() {
@@ -602,9 +624,9 @@
       const bar = h('div', null,
         h('div', { class: 'grades' },
           SRS.GRADES.map((g, i) => {
-            const preview = SRS.review(card, g, now).interval;
+            const preview = counts(g) ? fmtInterval(SRS.review(card, g, now).interval) : 'срок не меняется';
             return h('button', { class: g, onclick: () => safeGrade(g) },
-              GRADE_LABEL[g], h('small', null, kbdHint((i + 1) + ' · '), fmtInterval(preview)));
+              GRADE_LABEL[g], h('small', null, kbdHint((i + 1) + ' · '), preview));
           })),
         h('div', { class: 'hint' }, 'Оцените себя честно.', kbdHint(' Клавиши 1–4.')),
       );
@@ -626,7 +648,8 @@
       const shownAt = Date.now();
       const nextBtn = h('button', { class: 'primary', onclick: () => next() }, 'Дальше');
       const bar = h('div', { class: 'controls' },
-        h('p', { class: 'verdict different' }, 'Оценка: «Забыл» — карточка вернётся в этой сессии.'),
+        h('p', { class: 'verdict different' },
+          `Оценка: «Забыл» — карточка вернётся в этой ${practice ? 'тренировке' : 'сессии'}.`),
         nextBtn,
         h('div', { class: 'hint' }, kbdHint('Enter или пробел — дальше.')),
       );
@@ -637,12 +660,20 @@
       return bar;
     }
 
+    // In a Practice only "again" changes the schedule: SM-2 is not meant for answers given before
+    // the Card is due, so an early "good" must not grow the interval.
+    function counts(g) {
+      return !practice || g === 'again';
+    }
+
     function record(key, g) {
       onKey = null;
-      st.cards[key] = SRS.review(st.cards[key], g, Date.now());
-      saveOrWarn();
+      if (counts(g)) {
+        st.cards[key] = SRS.review(st.cards[key], g, Date.now());
+        saveOrWarn();
+      }
       reviewed++;
-      // "again": the Card comes back once more in this same Session.
+      // "again": the Card comes back once more in this same Session or Practice.
       if (g === 'again') queue.push(key);
       updateLeft();
     }
@@ -657,6 +688,17 @@
       cleanup = null;
       onKey = null;
       Speech.stop();
+      if (practice) {
+        $app.replaceChildren(
+          h('h1', null, '¡Muy bien!'),
+          h('p', null, `Тренировка окончена. Пройдено карточек: ${reviewed}.`),
+          h('div', { class: 'row' },
+            h('a', { class: 'btn', href: '#/' }, '← На главную'),
+            h('button', { class: 'primary', onclick: route }, 'Ещё одна тренировка'),
+          ),
+        );
+        return;
+      }
       const left = stats(Date.now()).due;
       $app.replaceChildren(
         h('h1', null, '¡Muy bien!'),

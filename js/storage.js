@@ -9,7 +9,7 @@
       version: 1,
       completedLessons: [],
       cards: {},
-      settings: { sessionMinutes: 15 },
+      settings: { sessionMinutes: 15, practiceCards: 20 },
       settingsUpdatedAt: null,
       lastExport: null,
     };
