@@ -1,0 +1,62 @@
+# Checks links in the docs and URLs in code comments with lychee (https://lychee.cli.rs).
+# Weekly and on demand only, never on pull requests: a flaky external site must not block a PR.
+# On a broken link the run fails (GitHub emails a failed scheduled run to whoever last
+# changed the schedule) and an issue titled "Broken links" is opened, or commented on if
+# one is already open.
+name: Links
+
+on:
+  schedule:
+    - cron: '17 6 * * 1' # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  lychee:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write # open or comment on the "Broken links" issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check links
+        id: lychee
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          fail: false
+          # Links CI cannot check are listed in .lycheeignore (not here: lychee would read
+          # the patterns in this file as links). Loopback and private addresses are skipped.
+          args: >-
+            --no-progress
+            --max-retries 3
+            --exclude-all-private
+            README.md CONTEXT.md CLAUDE.md
+            'js/**/*.js' 'worker/**/*.js' 'worker/**/*.jsonc'
+            '.github/**/*.yml'
+      - name: Report broken links
+        if: steps.lychee.outputs.exit_code != 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "Link check failed in $RUN_URL"
+            echo
+            cat lychee/out.md
+          } > "$RUNNER_TEMP/report.md"
+          issue=$(gh issue list --state open --search 'in:title "Broken links"' --json number --jq '.[0].number // empty')
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body-file "$RUNNER_TEMP/report.md"
+          else
+            gh issue create --title "Broken links" --body-file "$RUNNER_TEMP/report.md"
+          fi
+          exit 1
