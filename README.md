@@ -28,6 +28,10 @@ The Sync server runs at `https://spanish-progress.spanish-trainer.workers.dev` (
 
 A 4-digit PIN is a convenience, not strong security: anyone who knows the name can try PINs, slowed down by the lockout. Do not reuse a PIN from anything important.
 
+## Error monitoring
+
+Uncaught errors in the app are reported to [Sentry](https://sentry.io) (project `spanish-trainer` in the `ls-1h` organization). `index.html` loads Sentry's [Loader Script](https://docs.sentry.io/platforms/javascript/install/loader/); its SDK version and features (tracing, Session Replay) are set in the project's settings under SDK Setup → Loader Script, not in this repository. [js/monitoring.js](js/monitoring.js) initialises it: errors are tagged `production` on GitHub Pages and `local` anywhere else (a file opened from disk, a local server), and are sent without personal data (`sendDefaultPii: false`).
+
 ## Recordings
 
 Every phrase has a pre-made mp3 in [audio/](audio), listed in [data/audio.js](data/audio.js). The trainer plays the recording and falls back to the browser's voice only when a phrase has no recording, its recording is out of date, or playback fails. Dialogues are voiced by role: the `speaker` field of a phrase (`m`/`f`) picks the voice.
@@ -81,5 +85,6 @@ npm run lint
 - [tests/core.test.js](tests/core.test.js) covers the SM-2 scheduler and answer comparison.
 - [tests/lessons.test.js](tests/lessons.test.js) checks lesson data: unique ids, stress marks in transcriptions, paired ¿? and ¡! marks.
 - [tests/ui.test.js](tests/ui.test.js) runs the screens in jsdom: home and the settings page, lessons, marking a lesson completed, a session with both card directions, the timer, Practice over not-yet-Learned cards, export and import, and voice selection.
+- [tests/monitoring.test.js](tests/monitoring.test.js) checks the Sentry setup: the environment tag, no personal data, and that index.html loads Sentry before the app.
 
 GitHub Actions runs the tests on every pull request and on every push to `main` ([.github/workflows/test.yml](.github/workflows/test.yml)), on Node 24 LTS, after the linter.
