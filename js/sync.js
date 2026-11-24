@@ -12,6 +12,9 @@
   const NAME_RE = /^[\p{L}\p{N}_-]{2,32}$/u;
   const PIN_RE = /^\d{4}$/;
   const MAX_RETRIES = 5;
+  // Browsers refuse keepalive requests over 64 KiB (Fetch standard, HTTP-network-or-cache fetch).
+  // Sync requests run one at a time, so this request's body is all that is in flight.
+  const KEEPALIVE_MAX_BYTES = 64 * 1024;
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   const url = () => String(root.SYNC_URL || DEFAULT_URL).replace(/\/$/, '');
@@ -50,11 +53,13 @@
   }
 
   async function post(path, body) {
+    const text = JSON.stringify(body);
     const res = await root.fetch(url() + path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      keepalive: true,
+      body: text,
+      // keepalive lets a save finish after the page is closed, but only small bodies may use it.
+      keepalive: new TextEncoder().encode(text).length <= KEEPALIVE_MAX_BYTES,
     });
     let data = null;
     try { data = await res.json(); } catch (err) { data = null; }
@@ -62,9 +67,13 @@
   }
 
   // Turns a non-200 answer into a status; returns false when the sync must stop.
-  function failed(res) {
-    if (res.status === 401) setStatus({ state: 'wrong-pin' });
-    else if (res.status === 423) {
+  function failed(res, profile) {
+    if (res.status === 401) {
+      // A remembered PIN that the server rejects (e.g. typed while offline) is forgotten at once:
+      // sending it again with every change would lock the name for its owner.
+      if (profile === config) forget();
+      setStatus({ state: 'wrong-pin' });
+    } else if (res.status === 423) {
       setStatus({ state: 'locked', minutes: Math.max(1, Math.ceil((res.data.retryAfterSeconds || 60) / 60)) });
     } else setStatus({ state: 'error', code: res.status });
     return false;
@@ -80,7 +89,7 @@
     setStatus({ state: 'syncing' });
     try {
       const loaded = await post('/load', profile);
-      if (loaded.status !== 200) return failed(loaded);
+      if (loaded.status !== 200) return failed(loaded, profile);
       let { progress: remote, version } = loaded.data;
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         apply(remote);
@@ -89,7 +98,7 @@
           setStatus({ state: 'ok', at: Date.now() });
           return true;
         }
-        if (saved.status !== 409) return failed(saved);
+        if (saved.status !== 409) return failed(saved, profile);
         ({ progress: remote, version } = saved.data);
         // Another device saved in between. Wait a random moment so two devices saving at the
         // same time do not keep beating each other in lockstep.
@@ -150,10 +159,16 @@
     return ok;
   }
 
-  function disconnect() {
+  // Stops syncing on this device and forgets the Profile; the server copy stays.
+  function forget() {
     clearTimeout(timer);
+    timer = null;
     config = null;
     writeConfig(null);
+  }
+
+  function disconnect() {
+    forget();
     setStatus({ state: 'off' });
   }
 
