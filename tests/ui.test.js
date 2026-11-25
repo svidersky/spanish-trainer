@@ -294,7 +294,7 @@ test('lesson: "listen and repeat" pauses 1.3× the phrase length to repeat aloud
   await app.waitFor(() => /Слушать и повторять/.test(play.textContent));
   await new Promise(r => setTimeout(r, 50));
 
-  assert.deepEqual(log.filter(e => e.play).map(e => e.play), ids, 'each phrase once, no second round');
+  assert.deepEqual(log.filter(e => e.play).map(e => e.play), [...ids], 'each phrase once, no second round');
   const waits = log.filter(e => e.wait);
   assert.equal(waits.length, ids.length, 'one pause after each phrase, none after the dialogue');
   for (const w of waits) {
