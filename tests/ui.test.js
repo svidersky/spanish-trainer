@@ -264,22 +264,55 @@ test('lesson: "listen and repeat" plays phrases in order and can be stopped', as
 });
 
 // Records the order of Recordings played and of the app's waits (setTimeout with a delay),
-// and runs every wait at once so a 5-second pause does not slow the test down.
-function playbackLog(app) {
+// with what the player shows during each wait, and runs every wait at once so a 5-second
+// pause does not slow the test down. Every Recording takes `speakMs` on performance.now().
+function playbackLog(app, { speakMs = 2000 } = {}) {
   const w = app.window;
   const log = [];
+  let clock = 0;
+  w.performance.now = () => clock;
   const realTimeout = w.setTimeout.bind(w);
   w.setTimeout = (fn, ms, ...args) => {
-    if (ms > 0) log.push({ wait: ms });
+    if (ms > 0) log.push({ wait: ms, status: app.text('.status'), highlighted: app.$$('.phrase.playing').length });
     return realTimeout(fn, 0, ...args);
   };
   const realPlay = w.HTMLMediaElement.prototype.play;
   w.HTMLMediaElement.prototype.play = function () {
     log.push({ play: this.src.match(/([^/]+)\.mp3$/)[1] });
+    clock += speakMs;
     return realPlay.call(this);
   };
   return log;
 }
+
+test('lesson: "listen and repeat" pauses 1.3× the phrase length to repeat aloud, then ends', async t => {
+  const app = setup(t, { hash: '#/lesson/1' });
+  const ids = app.window.LESSONS[0].phrases.map(p => p.id);
+  const log = playbackLog(app, { speakMs: 2000 });
+  const play = app.byText('.player button', 'Слушать и повторять');
+  play.click();
+  await app.waitFor(() => /Слушать и повторять/.test(play.textContent));
+  await new Promise(r => setTimeout(r, 50));
+
+  assert.deepEqual(log.filter(e => e.play).map(e => e.play), ids, 'each phrase once, no second round');
+  const waits = log.filter(e => e.wait);
+  assert.equal(waits.length, ids.length, 'one pause after each phrase, none after the dialogue');
+  for (const w of waits) {
+    assert.equal(Math.round(w.wait), 2600);
+    assert.match(w.status, /Повторите вслух/);
+  }
+  assert.equal(app.$('.phrase.playing'), null);
+  assert.equal(app.text('.status'), '');
+  assert.match(app.byText('.player button', 'по кругу').textContent, /Слушать по кругу/);
+});
+
+test('lesson: "listen and repeat" pauses at least 1.8 s after a short phrase', async t => {
+  const app = setup(t, { hash: '#/lesson/1' });
+  const log = playbackLog(app, { speakMs: 500 });
+  app.byText('.player button', 'Слушать и повторять').click();
+  await app.waitFor(() => log.some(e => e.wait));
+  assert.equal(log.find(e => e.wait).wait, 1800);
+});
 
 const LOOP_LABEL = 'Слушать по кругу';
 
@@ -298,8 +331,33 @@ test('lesson: "loop" plays the whole dialogue with short gaps, pauses 5 s, then 
     assert.equal(waits.length, 1, `one gap after phrase ${k + 1}`);
     assert.ok(waits[0] > 0 && waits[0] < 1800, `phrase ${k + 1}: a short gap, no pause to repeat aloud (got ${waits[0]} ms)`);
   }
-  const pause = log.slice(plays[ids.length - 1] + 1, plays[ids.length]).map(e => e.wait);
-  assert.deepEqual(pause, [5000], '5 seconds between the end of the dialogue and the next round');
+  const pause = log.slice(plays[ids.length - 1] + 1, plays[ids.length]);
+  assert.deepEqual(pause.map(e => e.wait), [5000], '5 seconds between the end of the dialogue and the next round');
+  assert.equal(pause[0].highlighted, 0, 'no phrase is highlighted during the pause');
+  assert.match(pause[0].status, /Пауза/);
+});
+
+test('lesson: stopping the loop during the 5 s pause stops it for good', async t => {
+  const app = setup(t, { hash: '#/lesson/1' });
+  const w = app.window;
+  const ids = w.LESSONS[0].phrases.map(p => p.id);
+  const log = playbackLog(app);
+  const loop = app.byText('.player button', LOOP_LABEL);
+  // Hold the 5 s pause until the test has pressed stop.
+  let release;
+  const fastTimeout = w.setTimeout;
+  w.setTimeout = (fn, ms, ...args) => {
+    if (ms === 5000) { log.push({ wait: ms }); release = () => fn(...args); return 0; }
+    return fastTimeout(fn, ms, ...args);
+  };
+  loop.click();
+  await app.waitFor(() => release);
+  loop.click();
+  release();
+  await new Promise(r => setTimeout(r, 50));
+  assert.equal(log.filter(e => e.play).length, ids.length, 'no second round');
+  assert.equal(app.text('.status'), '');
+  assert.match(loop.textContent, new RegExp(LOOP_LABEL));
 });
 
 test('lesson: "loop" turns into a stop button and stopping ends the loop', async t => {
