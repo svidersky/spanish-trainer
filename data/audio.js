@@ -3,6 +3,7 @@
 window.AUDIO = {
   "l01-01": {
     "file": "audio/l01-01.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¡Hola! ¿Qué tal?",
     "voice": "es_ES-sharvard-medium",
@@ -10,6 +11,7 @@ window.AUDIO = {
   },
   "l01-02": {
     "file": "audio/l01-02.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Muy bien, gracias. ¿Y tú?",
     "voice": "es_ES-sharvard-medium",
@@ -17,6 +19,7 @@ window.AUDIO = {
   },
   "l01-03": {
     "file": "audio/l01-03.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Bien también.",
     "voice": "es_ES-sharvard-medium",
@@ -24,6 +27,7 @@ window.AUDIO = {
   },
   "l01-04": {
     "file": "audio/l01-04.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¿Cómo te llamas?",
     "voice": "es_ES-sharvard-medium",
@@ -31,6 +35,7 @@ window.AUDIO = {
   },
   "l01-05": {
     "file": "audio/l01-05.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Me llamo Ana. ¿Y tú?",
     "voice": "es_ES-sharvard-medium",
@@ -38,6 +43,7 @@ window.AUDIO = {
   },
   "l01-06": {
     "file": "audio/l01-06.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Me llamo Pablo. Encantado.",
     "voice": "es_ES-sharvard-medium",
@@ -45,6 +51,7 @@ window.AUDIO = {
   },
   "l01-07": {
     "file": "audio/l01-07.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Encantada.",
     "voice": "es_ES-sharvard-medium",
@@ -52,6 +59,7 @@ window.AUDIO = {
   },
   "l01-08": {
     "file": "audio/l01-08.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¡Hasta luego!",
     "voice": "es_ES-sharvard-medium",
@@ -59,6 +67,7 @@ window.AUDIO = {
   },
   "l02-01": {
     "file": "audio/l02-01.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "¿De dónde eres?",
     "voice": "es_ES-sharvard-medium",
@@ -66,6 +75,7 @@ window.AUDIO = {
   },
   "l02-02": {
     "file": "audio/l02-02.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Soy de Rusia.",
     "voice": "es_ES-sharvard-medium",
@@ -73,6 +83,7 @@ window.AUDIO = {
   },
   "l02-03": {
     "file": "audio/l02-03.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Y tú, ¿de dónde eres?",
     "voice": "es_ES-sharvard-medium",
@@ -80,6 +91,7 @@ window.AUDIO = {
   },
   "l02-04": {
     "file": "audio/l02-04.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Soy de Madrid, pero vivo en Barcelona.",
     "voice": "es_ES-sharvard-medium",
@@ -87,6 +99,7 @@ window.AUDIO = {
   },
   "l02-05": {
     "file": "audio/l02-05.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "¿Hablas español?",
     "voice": "es_ES-sharvard-medium",
@@ -94,6 +107,7 @@ window.AUDIO = {
   },
   "l02-06": {
     "file": "audio/l02-06.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Hablo un poco.",
     "voice": "es_ES-sharvard-medium",
@@ -101,6 +115,7 @@ window.AUDIO = {
   },
   "l02-07": {
     "file": "audio/l02-07.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "¡Hablas muy bien!",
     "voice": "es_ES-sharvard-medium",
@@ -108,6 +123,7 @@ window.AUDIO = {
   },
   "l03-01": {
     "file": "audio/l03-01.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¡Buenos días!",
     "voice": "es_ES-sharvard-medium",
@@ -115,6 +131,7 @@ window.AUDIO = {
   },
   "l03-02": {
     "file": "audio/l03-02.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Un café con leche, por favor.",
     "voice": "es_ES-sharvard-medium",
@@ -122,6 +139,7 @@ window.AUDIO = {
   },
   "l03-03": {
     "file": "audio/l03-03.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "¿Algo más?",
     "voice": "es_ES-sharvard-medium",
@@ -129,6 +147,7 @@ window.AUDIO = {
   },
   "l03-04": {
     "file": "audio/l03-04.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Sí, un agua sin gas.",
     "voice": "es_ES-sharvard-medium",
@@ -136,6 +155,7 @@ window.AUDIO = {
   },
   "l03-05": {
     "file": "audio/l03-05.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¿Cuánto es?",
     "voice": "es_ES-sharvard-medium",
@@ -143,6 +163,7 @@ window.AUDIO = {
   },
   "l03-06": {
     "file": "audio/l03-06.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Son tres euros.",
     "voice": "es_ES-sharvard-medium",
@@ -150,6 +171,7 @@ window.AUDIO = {
   },
   "l03-07": {
     "file": "audio/l03-07.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Aquí tiene.",
     "voice": "es_ES-sharvard-medium",
@@ -157,6 +179,7 @@ window.AUDIO = {
   },
   "l03-08": {
     "file": "audio/l03-08.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¡Gracias, adiós!",
     "voice": "es_ES-sharvard-medium",
@@ -164,6 +187,7 @@ window.AUDIO = {
   },
   "l04-01": {
     "file": "audio/l04-01.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Perdone, ¿dónde está el baño?",
     "voice": "es_ES-sharvard-medium",
@@ -171,6 +195,7 @@ window.AUDIO = {
   },
   "l04-02": {
     "file": "audio/l04-02.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Está allí, a la derecha.",
     "voice": "es_ES-sharvard-medium",
@@ -178,6 +203,7 @@ window.AUDIO = {
   },
   "l04-03": {
     "file": "audio/l04-03.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¿Y la estación de metro?",
     "voice": "es_ES-sharvard-medium",
@@ -185,6 +211,7 @@ window.AUDIO = {
   },
   "l04-04": {
     "file": "audio/l04-04.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Está cerca. Todo recto y a la izquierda.",
     "voice": "es_ES-sharvard-medium",
@@ -192,6 +219,7 @@ window.AUDIO = {
   },
   "l04-05": {
     "file": "audio/l04-05.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¿Está lejos?",
     "voice": "es_ES-sharvard-medium",
@@ -199,6 +227,7 @@ window.AUDIO = {
   },
   "l04-06": {
     "file": "audio/l04-06.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "No, está a cinco minutos.",
     "voice": "es_ES-sharvard-medium",
@@ -206,6 +235,7 @@ window.AUDIO = {
   },
   "l04-07": {
     "file": "audio/l04-07.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Muchas gracias.",
     "voice": "es_ES-sharvard-medium",
@@ -213,6 +243,7 @@ window.AUDIO = {
   },
   "l04-08": {
     "file": "audio/l04-08.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "De nada.",
     "voice": "es_ES-sharvard-medium",
@@ -220,6 +251,7 @@ window.AUDIO = {
   },
   "l05-01": {
     "file": "audio/l05-01.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Uno, dos, tres, cuatro, cinco.",
     "voice": "es_ES-sharvard-medium",
@@ -227,6 +259,7 @@ window.AUDIO = {
   },
   "l05-02": {
     "file": "audio/l05-02.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Seis, siete, ocho, nueve, diez.",
     "voice": "es_ES-sharvard-medium",
@@ -234,6 +267,7 @@ window.AUDIO = {
   },
   "l05-03": {
     "file": "audio/l05-03.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "¿Cuántos años tienes?",
     "voice": "es_ES-sharvard-medium",
@@ -241,6 +275,7 @@ window.AUDIO = {
   },
   "l05-04": {
     "file": "audio/l05-04.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Tengo treinta años.",
     "voice": "es_ES-sharvard-medium",
@@ -248,6 +283,7 @@ window.AUDIO = {
   },
   "l05-05": {
     "file": "audio/l05-05.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¿Qué hora es?",
     "voice": "es_ES-sharvard-medium",
@@ -255,6 +291,7 @@ window.AUDIO = {
   },
   "l05-06": {
     "file": "audio/l05-06.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Son las dos y media.",
     "voice": "es_ES-sharvard-medium",
@@ -262,6 +299,7 @@ window.AUDIO = {
   },
   "l05-07": {
     "file": "audio/l05-07.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Es la una.",
     "voice": "es_ES-sharvard-medium",
@@ -269,6 +307,7 @@ window.AUDIO = {
   },
   "l06-01": {
     "file": "audio/l06-01.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Buenas tardes. ¿Qué desea?",
     "voice": "es_ES-sharvard-medium",
@@ -276,6 +315,7 @@ window.AUDIO = {
   },
   "l06-02": {
     "file": "audio/l06-02.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Quiero un kilo de tomates.",
     "voice": "es_ES-sharvard-medium",
@@ -283,6 +323,7 @@ window.AUDIO = {
   },
   "l06-03": {
     "file": "audio/l06-03.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¿Tiene pan?",
     "voice": "es_ES-sharvard-medium",
@@ -290,6 +331,7 @@ window.AUDIO = {
   },
   "l06-04": {
     "file": "audio/l06-04.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Sí, claro. ¿Algo más?",
     "voice": "es_ES-sharvard-medium",
@@ -297,6 +339,7 @@ window.AUDIO = {
   },
   "l06-05": {
     "file": "audio/l06-05.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "No, nada más, gracias.",
     "voice": "es_ES-sharvard-medium",
@@ -304,6 +347,7 @@ window.AUDIO = {
   },
   "l06-06": {
     "file": "audio/l06-06.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¿Puedo pagar con tarjeta?",
     "voice": "es_ES-sharvard-medium",
@@ -311,6 +355,7 @@ window.AUDIO = {
   },
   "l06-07": {
     "file": "audio/l06-07.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Sí, por supuesto.",
     "voice": "es_ES-sharvard-medium",
@@ -318,6 +363,7 @@ window.AUDIO = {
   },
   "l07-01": {
     "file": "audio/l07-01.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "¿Tienes hermanos?",
     "voice": "es_ES-sharvard-medium",
@@ -325,6 +371,7 @@ window.AUDIO = {
   },
   "l07-02": {
     "file": "audio/l07-02.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Sí, tengo una hermana.",
     "voice": "es_ES-sharvard-medium",
@@ -332,6 +379,7 @@ window.AUDIO = {
   },
   "l07-03": {
     "file": "audio/l07-03.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Mi hermana se llama Lucía.",
     "voice": "es_ES-sharvard-medium",
@@ -339,6 +387,7 @@ window.AUDIO = {
   },
   "l07-04": {
     "file": "audio/l07-04.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "¿Estás casado?",
     "voice": "es_ES-sharvard-medium",
@@ -346,6 +395,7 @@ window.AUDIO = {
   },
   "l07-05": {
     "file": "audio/l07-05.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Sí, y tengo dos hijos.",
     "voice": "es_ES-sharvard-medium",
@@ -353,6 +403,7 @@ window.AUDIO = {
   },
   "l07-06": {
     "file": "audio/l07-06.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Mis padres viven en Moscú.",
     "voice": "es_ES-sharvard-medium",
@@ -360,6 +411,7 @@ window.AUDIO = {
   },
   "l08-01": {
     "file": "audio/l08-01.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Me levanto a las siete.",
     "voice": "es_ES-sharvard-medium",
@@ -367,6 +419,7 @@ window.AUDIO = {
   },
   "l08-02": {
     "file": "audio/l08-02.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Desayuno café y tostadas.",
     "voice": "es_ES-sharvard-medium",
@@ -374,6 +427,7 @@ window.AUDIO = {
   },
   "l08-03": {
     "file": "audio/l08-03.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Trabajo de nueve a cinco.",
     "voice": "es_ES-sharvard-medium",
@@ -381,6 +435,7 @@ window.AUDIO = {
   },
   "l08-04": {
     "file": "audio/l08-04.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Como a las dos.",
     "voice": "es_ES-sharvard-medium",
@@ -388,6 +443,7 @@ window.AUDIO = {
   },
   "l08-05": {
     "file": "audio/l08-05.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Por la tarde voy al gimnasio.",
     "voice": "es_ES-sharvard-medium",
@@ -395,6 +451,7 @@ window.AUDIO = {
   },
   "l08-06": {
     "file": "audio/l08-06.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Ceno a las nueve.",
     "voice": "es_ES-sharvard-medium",
@@ -402,6 +459,7 @@ window.AUDIO = {
   },
   "l08-07": {
     "file": "audio/l08-07.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Me acuesto a las once.",
     "voice": "es_ES-sharvard-medium",
@@ -409,6 +467,7 @@ window.AUDIO = {
   },
   "l09-01": {
     "file": "audio/l09-01.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "¿Qué tiempo hace hoy?",
     "voice": "es_ES-sharvard-medium",
@@ -416,6 +475,7 @@ window.AUDIO = {
   },
   "l09-02": {
     "file": "audio/l09-02.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Hace sol y mucho calor.",
     "voice": "es_ES-sharvard-medium",
@@ -423,6 +483,7 @@ window.AUDIO = {
   },
   "l09-03": {
     "file": "audio/l09-03.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Hace frío.",
     "voice": "es_ES-sharvard-medium",
@@ -430,6 +491,7 @@ window.AUDIO = {
   },
   "l09-04": {
     "file": "audio/l09-04.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Está lloviendo.",
     "voice": "es_ES-sharvard-medium",
@@ -437,6 +499,7 @@ window.AUDIO = {
   },
   "l09-05": {
     "file": "audio/l09-05.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "Mañana va a hacer buen tiempo.",
     "voice": "es_ES-sharvard-medium",
@@ -444,6 +507,7 @@ window.AUDIO = {
   },
   "l09-06": {
     "file": "audio/l09-06.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Me gusta el verano.",
     "voice": "es_ES-sharvard-medium",
@@ -451,6 +515,7 @@ window.AUDIO = {
   },
   "l10-01": {
     "file": "audio/l10-01.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Una mesa para dos, por favor.",
     "voice": "es_ES-sharvard-medium",
@@ -458,6 +523,7 @@ window.AUDIO = {
   },
   "l10-02": {
     "file": "audio/l10-02.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¿Qué me recomienda?",
     "voice": "es_ES-sharvard-medium",
@@ -465,6 +531,7 @@ window.AUDIO = {
   },
   "l10-03": {
     "file": "audio/l10-03.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "La paella está muy rica.",
     "voice": "es_ES-sharvard-medium",
@@ -472,6 +539,7 @@ window.AUDIO = {
   },
   "l10-04": {
     "file": "audio/l10-04.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "Para mí, la paella y una copa de vino tinto.",
     "voice": "es_ES-sharvard-medium",
@@ -479,6 +547,7 @@ window.AUDIO = {
   },
   "l10-05": {
     "file": "audio/l10-05.mp3",
+    "sentencePause": 0.5,
     "speaker": "m",
     "text": "¿Me trae la cuenta, por favor?",
     "voice": "es_ES-sharvard-medium",
@@ -486,6 +555,7 @@ window.AUDIO = {
   },
   "l10-06": {
     "file": "audio/l10-06.mp3",
+    "sentencePause": 0.5,
     "speaker": "f",
     "text": "¡Que aproveche!",
     "voice": "es_ES-sharvard-medium",
