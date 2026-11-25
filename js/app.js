@@ -482,45 +482,68 @@
       ));
     const dialog = h('ol', { class: 'dialog' }, items);
 
-    // Playback: Phrase → pause to repeat aloud → next Phrase.
+    // Two playback modes, one at a time:
+    // "listen and repeat": Phrase → pause to repeat aloud → next Phrase, once through;
+    // "loop": the whole dialogue with short gaps, a pause, and again until stopped.
+    const LOOP_GAP_MS = 700;
+    const LOOP_PAUSE_MS = 5000;
     let runId = 0;
+    let mode = null; // 'repeat' | 'loop' | null
     const status = h('div', { class: 'status', 'aria-live': 'polite' });
-    const playBtn = h('button', { class: 'primary', onclick: () => (runId && playing ? stop() : playAll()) }, t('listenAndRepeat'));
-    let playing = false;
+    const playBtn = h('button', { class: 'primary', onclick: () => (mode === 'repeat' ? stop() : play('repeat')) }, t('listenAndRepeat'));
+    const loopBtn = h('button', { onclick: () => (mode === 'loop' ? stop() : play('loop')) }, t('listenInLoop'));
 
-    function setPlaying(v) {
-      playing = v;
-      playBtn.textContent = v ? t('stop') : t('listenAndRepeat');
+    function setMode(m) {
+      mode = m;
+      playBtn.textContent = m === 'repeat' ? t('stop') : t('listenAndRepeat');
+      loopBtn.textContent = m === 'loop' ? t('stop') : t('listenInLoop');
     }
 
-    async function playAll() {
-      const my = ++runId;
-      setPlaying(true);
-      for (let i = 0; i < lesson.phrases.length; i++) {
-        if (my !== runId) return;
-        items.forEach(li => li.classList.remove('playing'));
-        items[i].classList.add('playing');
-        items[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        status.textContent = t('listenNow');
-        const t0 = performance.now();
-        await Speech.say(lesson.phrases[i]);
-        if (my !== runId) return;
-        const spoken = performance.now() - t0;
-        status.textContent = t('repeatAloud');
-        await sleep(Math.max(1800, spoken * 1.3));
-      }
-      if (my !== runId) return;
+    function highlight(i) {
       items.forEach(li => li.classList.remove('playing'));
+      if (i == null) return;
+      items[i].classList.add('playing');
+      items[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    async function play(m) {
+      stop();
+      const my = ++runId;
+      setMode(m);
+      do {
+        for (let i = 0; i < lesson.phrases.length; i++) {
+          if (my !== runId) return;
+          highlight(i);
+          status.textContent = t('listenNow');
+          const t0 = performance.now();
+          await Speech.say(lesson.phrases[i]);
+          if (my !== runId) return;
+          if (m === 'repeat') {
+            status.textContent = t('repeatAloud');
+            await sleep(Math.max(1800, (performance.now() - t0) * 1.3));
+          } else if (i < lesson.phrases.length - 1) {
+            await sleep(LOOP_GAP_MS);
+          }
+        }
+        if (my !== runId) return;
+        if (m === 'loop') {
+          highlight(null);
+          status.textContent = t('loopPause');
+          await sleep(LOOP_PAUSE_MS);
+        }
+      } while (m === 'loop' && my === runId);
+      if (my !== runId) return;
+      highlight(null);
       status.textContent = '';
-      setPlaying(false);
+      setMode(null);
     }
 
     function stop() {
       runId++;
       Speech.stop();
-      items.forEach(li => li.classList.remove('playing'));
+      highlight(null);
       status.textContent = '';
-      setPlaying(false);
+      setMode(null);
     }
 
     cleanup = stop;
@@ -541,7 +564,7 @@
       h('p', { class: 'muted' }, h('a', { href: '#/' }, t('allLessons'))),
       h('h1', null, t('lessonHeading', lesson.n), h('span', { lang: 'es' }, lesson.title)),
       h('p', { class: 'sub', lang: I18n.lang() }, translation(lesson)),
-      h('div', { class: 'player' }, h('div', { class: 'row' }, playBtn), status),
+      h('div', { class: 'player' }, h('div', { class: 'row' }, playBtn, loopBtn), status),
       ...(Speech.supported && !Speech.voice() && !Speech.hasRecordings() ? [h('div', null, voiceInfo())] : []),
       dialog,
       ...(notesOf(lesson) && notesOf(lesson).length
