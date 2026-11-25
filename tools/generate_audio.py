@@ -26,6 +26,10 @@ MANIFEST = ROOT / "data" / "audio.js"
 AUDIO_DIR = ROOT / "audio"
 MANIFEST_PREFIX = "window.AUDIO = "
 
+# Silence between the sentences of one Phrase ("Muy bien, gracias. ¿Y tú?"). Piper synthesizes
+# each sentence separately but writes them back to back, which sounds rushed.
+SENTENCE_PAUSE_SECONDS = 0.5
+
 # speaker -> (Piper voice, speaker id inside a multi-speaker voice)
 VOICES = {
     "m": ("es_ES-sharvard-medium", 0),  # sharvard speaker 0 = "M"
@@ -64,6 +68,21 @@ def write_manifest(entries):
     MANIFEST.write_text(header + MANIFEST_PREFIX + body + ";\n", encoding="utf-8")
 
 
+def write_wav(voice, text, speaker_id, wav_path):
+    """Synthesize text sentence by sentence, with SENTENCE_PAUSE_SECONDS of silence between sentences."""
+    chunks = list(voice.synthesize(text, syn_config=SynthesisConfig(speaker_id=speaker_id)))
+    first = chunks[0]
+    silence = bytes(first.sample_width * first.sample_channels * round(first.sample_rate * SENTENCE_PAUSE_SECONDS))
+    with wave.open(str(wav_path), "wb") as wav:
+        wav.setframerate(first.sample_rate)
+        wav.setsampwidth(first.sample_width)
+        wav.setnchannels(first.sample_channels)
+        for i, chunk in enumerate(chunks):
+            if i:
+                wav.writeframes(silence)
+            wav.writeframes(chunk.audio_int16_bytes)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--voices-dir", required=True, type=Path)
@@ -83,7 +102,8 @@ def main():
     for p in phrases:
         voice_name, speaker_id = VOICES[p["speaker"]]
         file = f"audio/{p['id']}.mp3"
-        entry = {"text": p["es"], "voice": voice_name, "voiceSpeakerId": speaker_id, "speaker": p["speaker"], "file": file}
+        entry = {"text": p["es"], "voice": voice_name, "voiceSpeakerId": speaker_id, "speaker": p["speaker"],
+                 "sentencePause": SENTENCE_PAUSE_SECONDS, "file": file}
         entries[p["id"]] = entry
         if not args.force and old.get(p["id"]) == entry and (ROOT / file).exists():
             continue
@@ -97,8 +117,7 @@ def main():
 
         with tempfile.TemporaryDirectory() as tmp:
             wav_path = Path(tmp) / "phrase.wav"
-            with wave.open(str(wav_path), "wb") as wav:
-                voice.synthesize_wav(p["es"], wav, syn_config=SynthesisConfig(speaker_id=speaker_id))
+            write_wav(voice, p["es"], speaker_id, wav_path)
             subprocess.run(
                 ["ffmpeg", "-loglevel", "error", "-y", "-i", str(wav_path),
                  "-codec:a", "libmp3lame", "-q:a", "5", str(ROOT / file)],
