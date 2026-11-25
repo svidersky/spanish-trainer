@@ -263,6 +263,90 @@ test('lesson: "listen and repeat" plays phrases in order and can be stopped', as
   assert.match(play.textContent, /Слушать и повторять/);
 });
 
+// Records the order of Recordings played and of the app's waits (setTimeout with a delay),
+// and runs every wait at once so a 5-second pause does not slow the test down.
+function playbackLog(app) {
+  const w = app.window;
+  const log = [];
+  const realTimeout = w.setTimeout.bind(w);
+  w.setTimeout = (fn, ms, ...args) => {
+    if (ms > 0) log.push({ wait: ms });
+    return realTimeout(fn, 0, ...args);
+  };
+  const realPlay = w.HTMLMediaElement.prototype.play;
+  w.HTMLMediaElement.prototype.play = function () {
+    log.push({ play: this.src.match(/([^/]+)\.mp3$/)[1] });
+    return realPlay.call(this);
+  };
+  return log;
+}
+
+const LOOP_LABEL = 'Слушать по кругу';
+
+test('lesson: "loop" plays the whole dialogue with short gaps, pauses 5 s, then starts again', async t => {
+  const app = setup(t, { hash: '#/lesson/1' });
+  const ids = app.window.LESSONS[0].phrases.map(p => p.id);
+  const log = playbackLog(app);
+  app.byText('.player button', LOOP_LABEL).click();
+  await app.waitFor(() => log.filter(e => e.play).length > ids.length);
+
+  const plays = log.map((e, i) => (e.play ? i : -1)).filter(i => i >= 0);
+  assert.deepEqual(plays.slice(0, ids.length + 1).map(i => log[i].play), [...ids, ids[0]],
+    'every phrase in order, then the dialogue starts over');
+  for (let k = 0; k < ids.length - 1; k++) {
+    const waits = log.slice(plays[k] + 1, plays[k + 1]).map(e => e.wait);
+    assert.equal(waits.length, 1, `one gap after phrase ${k + 1}`);
+    assert.ok(waits[0] > 0 && waits[0] < 1800, `phrase ${k + 1}: a short gap, no pause to repeat aloud (got ${waits[0]} ms)`);
+  }
+  const pause = log.slice(plays[ids.length - 1] + 1, plays[ids.length]).map(e => e.wait);
+  assert.deepEqual(pause, [5000], '5 seconds between the end of the dialogue and the next round');
+});
+
+test('lesson: "loop" turns into a stop button and stopping ends the loop', async t => {
+  const app = setup(t, { hash: '#/lesson/1' });
+  const log = playbackLog(app);
+  const loop = app.byText('.player button', LOOP_LABEL);
+  loop.click();
+  assert.ok(app.$('.phrase.playing'), 'the current phrase is highlighted');
+  await app.waitFor(() => log.filter(e => e.play).length >= 2);
+  assert.match(loop.textContent, /Остановить/);
+  loop.click();
+  const played = log.filter(e => e.play).length;
+  await new Promise(r => setTimeout(r, 100));
+  assert.equal(log.filter(e => e.play).length, played, 'nothing plays after stop');
+  assert.equal(app.$('.phrase.playing'), null);
+  assert.match(loop.textContent, new RegExp(LOOP_LABEL));
+  assert.equal(app.text('.status'), '');
+});
+
+test('lesson: starting "listen and repeat" stops the loop, and the other way round', async t => {
+  const app = setup(t, { hash: '#/lesson/1' });
+  const loop = app.byText('.player button', LOOP_LABEL);
+  const repeat = app.byText('.player button', 'Слушать и повторять');
+
+  loop.click();
+  repeat.click();
+  assert.match(loop.textContent, new RegExp(LOOP_LABEL), 'loop is no longer running');
+  assert.match(repeat.textContent, /Остановить/);
+  await app.waitFor(() => /Повторите вслух/.test(app.text('.status')));
+
+  loop.click();
+  assert.match(repeat.textContent, /Слушать и повторять/, 'listen and repeat is no longer running');
+  assert.match(loop.textContent, /Остановить/);
+  assert.equal(app.$$('.phrase.playing').length, 1, 'one phrase highlighted at a time');
+});
+
+test('lesson: leaving the lesson stops the loop', async t => {
+  const app = setup(t, { hash: '#/lesson/1' });
+  const log = playbackLog(app);
+  app.byText('.player button', LOOP_LABEL).click();
+  await app.waitFor(() => log.filter(e => e.play).length >= 2);
+  await app.go('#/');
+  const played = log.filter(e => e.play).length;
+  await new Promise(r => setTimeout(r, 100));
+  assert.equal(log.filter(e => e.play).length, played);
+});
+
 test('lesson: marking it completed adds two cards per phrase', t => {
   const app = setup(t, { hash: '#/lesson/1' });
   app.byText('button', 'Отметить урок пройденным').click();

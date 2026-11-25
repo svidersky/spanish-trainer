@@ -171,6 +171,13 @@ test('language: a Lesson in English shows English translations, notes and a Lati
   noRussian(app, 'lesson 1');
 });
 
+test('language: the Lesson player buttons in English', t => {
+  const app = setup(t, { hash: '#/lesson/1', progress: en() });
+  const labels = app.$$('.player button').map(b => b.textContent);
+  assert.deepEqual(labels, ['▶ Listen and repeat', '🔁 Listen in a loop']);
+  noRussian(app, 'lesson player');
+});
+
 test('language: Cards in English: ES → EN Recognition, EN → ES Production', async t => {
   const recog = setup(t, { hash: '#/review', progress: en(lessonOneProgress()) });
   await recog.waitFor(() => recog.$('.card'));
