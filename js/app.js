@@ -507,10 +507,9 @@
     }
 
     async function play(m) {
-      stop();
       const my = ++runId;
       setMode(m);
-      do {
+      for (;;) {
         for (let i = 0; i < lesson.phrases.length; i++) {
           if (my !== runId) return;
           highlight(i);
@@ -526,13 +525,11 @@
           }
         }
         if (my !== runId) return;
-        if (m === 'loop') {
-          highlight(null);
-          status.textContent = t('loopPause');
-          await sleep(LOOP_PAUSE_MS);
-        }
-      } while (m === 'loop' && my === runId);
-      if (my !== runId) return;
+        if (m !== 'loop') break;
+        highlight(null);
+        status.textContent = t('loopPause');
+        await sleep(LOOP_PAUSE_MS); // a stop during the pause is caught at the top of the next round
+      }
       highlight(null);
       status.textContent = '';
       setMode(null);
