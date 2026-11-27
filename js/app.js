@@ -1,4 +1,4 @@
-// Trainer screens: home, settings, Lesson, review Session and Practice.
+// Trainer screens: home, settings, Lesson, review Session, Practice and the Archive run.
 // Learner-facing strings come from js/i18n.js in the chosen interface language (Russian or English).
 (function () {
   'use strict';
@@ -8,7 +8,7 @@
   const DIRS = ['recog', 'produce'];
   const t = I18n.t;
   const DIR_KEY = { recog: 'dirRecog', produce: 'dirProduce' };
-  const GRADE_KEY = { again: 'gradeAgain', hard: 'gradeHard', good: 'gradeGood', easy: 'gradeEasy' };
+  const GRADE_KEY = { again: 'gradeAgain', hard: 'gradeHard', good: 'gradeGood' };
 
   // Phrase id -> { phrase, lesson, order }
   const phraseIndex = new Map();
@@ -83,15 +83,31 @@
     return Object.keys(cards).filter(k => phraseIndex.has(parseKey(k).id));
   }
 
+  // Cards in the Deck, not in the Archive.
+  const deckCards = () => liveCards().filter(k => !SRS.isArchived(Store.get().cards[k]));
+  const archivedCards = () => liveCards().filter(k => SRS.isArchived(Store.get().cards[k]));
+
+  // Counts for the Deck (total, due, learned); archived Cards are counted on their own.
   function stats(now) {
     const cards = Store.get().cards;
     let due = 0, learned = 0, total = 0;
-    for (const k of liveCards()) {
+    for (const k of deckCards()) {
       total++;
       if (SRS.isDue(cards[k], now)) due++;
       if (SRS.isLearned(cards[k])) learned++;
     }
-    return { due, learned, total, notLearned: total - learned };
+    const archived = archivedCards().length;
+    return { due, learned, total, archived, notLearned: total - learned };
+  }
+
+  // A random pick of n keys (Fisher–Yates shuffle, then the first n).
+  function randomPick(keys, n) {
+    const a = keys.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a.slice(0, n);
   }
 
   // Practice order: the hardest Cards first (lowest ease, then most lapses), then the soonest due,
@@ -148,8 +164,9 @@
     $app.replaceChildren();
     window.scrollTo(0, 0);
     if (parts[0] === 'lesson') renderLesson(parts[1]);
-    else if (parts[0] === 'review') renderReview({ practice: false });
-    else if (parts[0] === 'practice') renderReview({ practice: true });
+    else if (parts[0] === 'review') renderReview('session');
+    else if (parts[0] === 'practice') renderReview('practice');
+    else if (parts[0] === 'archive') renderReview('archive');
     else if (parts[0] === 'settings') renderSettings();
     else renderHome();
   }
@@ -191,7 +208,8 @@
   // export (null if never exported).
   function backupDue(now) {
     const st = Store.get();
-    if (stats(now).total === 0) return false;
+    const s = stats(now);
+    if (s.total + s.archived === 0) return false;
     if (hasProfile()) return false;
     if (!st.lastExport) return null;
     const days = Math.floor((now - st.lastExport) / SRS.DAY);
@@ -240,8 +258,9 @@
         h('div', { class: 'stat' }, h('b', null, s.due), h('span', null, t('statDue'))),
         h('div', { class: 'stat' }, h('b', null, s.learned), h('span', null, t('statLearned'))),
         h('div', { class: 'stat' }, h('b', null, s.total), h('span', null, t('statTotal'))),
+        h('div', { class: 'stat' }, h('b', null, s.archived), h('span', null, t('statArchived'))),
       ),
-      s.total === 0
+      s.total + s.archived === 0
         ? h('p', { class: 'muted' }, t('deckEmpty'))
         : s.due === 0
           ? h('p', { class: 'muted' }, t('allReviewedToday'))
@@ -249,6 +268,10 @@
       s.notLearned > 0
         ? h('p', null, h('a', { class: 'btn', href: '#/practice' },
             t('startPractice', Math.min(s.notLearned, st.settings.practiceCards))))
+        : null,
+      s.archived > 0
+        ? h('p', null, h('a', { class: 'btn', href: '#/archive' },
+            t('startArchive', Math.min(s.archived, st.settings.practiceCards))))
         : null,
     );
 
@@ -576,22 +599,28 @@
     );
   }
 
-  // ---------- Session ----------
+  // ---------- Session, Practice and the Archive run ----------
 
-  function renderReview({ practice }) {
+  // mode: 'session', 'practice' or 'archive'.
+  function renderReview(mode) {
     const st = Store.get();
+    const practice = mode === 'practice';
+    const archiveRun = mode === 'archive';
     // A Session takes the due Cards for a set time; a Practice takes a set number of the
-    // not-yet-Learned Cards, due or not.
-    const queue = practice
-      ? liveCards().filter(k => !SRS.isLearned(st.cards[k])).sort(practiceOrder).slice(0, st.settings.practiceCards)
-      : liveCards().filter(k => SRS.isDue(st.cards[k], Date.now())).sort(queueOrder);
-    const title = practice ? t('practiceTitle') : t('reviewTitle');
+    // not-yet-Learned Cards, due or not; the Archive run takes as many archived Cards at random.
+    const queue = archiveRun
+      ? randomPick(archivedCards(), st.settings.practiceCards)
+      : practice
+        ? deckCards().filter(k => !SRS.isLearned(st.cards[k])).sort(practiceOrder).slice(0, st.settings.practiceCards)
+        : deckCards().filter(k => SRS.isDue(st.cards[k], Date.now())).sort(queueOrder);
+    const title = t({ session: 'reviewTitle', practice: 'practiceTitle', archive: 'archiveTitle' }[mode]);
     document.title = title;
+    const untimed = practice || archiveRun;
 
     if (!queue.length) {
       $app.append(
         h('h1', null, title),
-        h('p', null, practice ? t('nothingToPractise') : t('nothingToReview')),
+        h('p', null, t({ session: 'nothingToReview', practice: 'nothingToPractise', archive: 'nothingArchived' }[mode])),
         h('a', { class: 'btn', href: '#/' }, t('toHome')),
       );
       return;
@@ -603,7 +632,7 @@
     let reviewed = 0;
     let onKey = null;
 
-    const timerEl = practice ? null : h('span', { class: 'timer' }, fmtClock(limitMs));
+    const timerEl = untimed ? null : h('span', { class: 'timer' }, fmtClock(limitMs));
     const leftEl = h('span');
     const stage = h('div');
 
@@ -616,7 +645,7 @@
         timerEl.textContent = t('timeUp');
       }
     };
-    const timer = practice ? null : setInterval(tick, 1000);
+    const timer = untimed ? null : setInterval(tick, 1000);
     const keyListener = e => { if (onKey) onKey(e); };
     document.addEventListener('keydown', keyListener);
     cleanup = () => { clearInterval(timer); document.removeEventListener('keydown', keyListener); };
@@ -633,7 +662,7 @@
     next();
 
     function updateLeft() {
-      leftEl.textContent = t(practice ? 'leftPractice' : 'leftSession', queue.length, reviewed);
+      leftEl.textContent = t(untimed ? 'leftPractice' : 'leftSession', queue.length, reviewed);
     }
 
     function next() {
@@ -718,22 +747,71 @@
       const now = Date.now();
       const card = st.cards[key];
       // Guard against a bounced key press: the key that revealed the answer must not also set the Grade.
-      const safeGrade = g => { if (Date.now() - now > 300) grade(key, g); };
+      const settled = () => Date.now() - now > 300;
+      const safeGrade = g => { if (settled()) grade(key, g); };
+      const safeArchive = () => { if (settled()) bar.replaceWith(archiveChoice(key, gradeBar)); };
       const bar = h('div', null,
         h('div', { class: 'grades' },
           SRS.GRADES.map((g, i) => {
             const preview = counts(g) ? fmtInterval(SRS.review(card, g, now).interval) : t('scheduleUnchanged');
             return h('button', { class: g, onclick: () => safeGrade(g) },
               t(GRADE_KEY[g]), h('small', null, kbdHint((i + 1) + ' · '), preview));
-          })),
+          }),
+          h('button', { class: 'archive', onclick: safeArchive },
+            t('gradeArchive'), h('small', null, kbdHint((SRS.GRADES.length + 1) + ' · '), t('archivePreview')))),
         h('div', { class: 'hint' }, t('gradeHint'), kbdHint(t('gradeKeysHint'))),
       );
       onKey = e => {
-        const i = ['1', '2', '3', '4'].indexOf(e.key);
+        const i = ['1', '2', '3'].indexOf(e.key);
         if (i >= 0) { e.preventDefault(); safeGrade(SRS.GRADES[i]); }
+        else if (e.key === '4') { e.preventDefault(); safeArchive(); }
       };
       setTimeout(() => { const b = bar.querySelector('.good'); if (b) b.focus(); }, 0);
       return bar;
+    }
+
+    // "Всё, запомнил": which Cards go to the Archive — this one, or both Cards of the Phrase
+    // (offered while the other one is still in the Deck). "Cancel" brings back what was there.
+    function archiveChoice(key, back) {
+      const shownAt = Date.now();
+      const settled = () => Date.now() - shownAt > 300;
+      const { id, dir } = parseKey(key);
+      const otherKey = cardKey(id, DIRS.find(d => d !== dir));
+      const other = st.cards[otherKey];
+      const offerBoth = !!other && !SRS.isArchived(other);
+      const pick = keys => { if (settled()) archive(keys); };
+      const cancel = () => { if (settled()) bar.replaceWith(back(key)); };
+      const oneBtn = h('button', { class: 'primary', onclick: () => pick([key]) }, t('archiveOne'));
+      const bar = h('div', { class: 'archive-choice' },
+        h('p', null, t('archiveQuestion')),
+        h('div', { class: 'row' },
+          oneBtn,
+          offerBoth ? h('button', { onclick: () => pick([key, otherKey]) }, t('archiveBoth')) : null,
+          h('button', { onclick: cancel }, t('cancel')),
+        ),
+        h('div', { class: 'hint' }, kbdHint(t(offerBoth ? 'archiveKeysHint' : 'archiveOneKeyHint'))),
+      );
+      onKey = e => {
+        if (e.key === '1' || (e.key === 'Enter' && document.activeElement === oneBtn)) { e.preventDefault(); pick([key]); }
+        else if (e.key === '2' && offerBoth) { e.preventDefault(); pick([key, otherKey]); }
+        else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      };
+      setTimeout(() => oneBtn.focus(), 0);
+      return bar;
+    }
+
+    // Moves the Cards to the Archive. They also leave this run's queue (the other Card of the
+    // Phrase, or this one if "again" had put it back).
+    function archive(keys) {
+      onKey = null;
+      const now = Date.now();
+      for (const k of keys) {
+        st.cards[k] = SRS.archive(st.cards[k], now);
+        for (let i = queue.length - 1; i >= 0; i--) if (queue[i] === k) queue.splice(i, 1);
+      }
+      saveOrWarn();
+      reviewed++;
+      next();
     }
 
     // "Don't know": the answer is shown and the Grade is "again" right away; one button moves on.
@@ -746,7 +824,7 @@
       const shownAt = Date.now();
       const nextBtn = h('button', { class: 'primary', onclick: () => next() }, t('next'));
       const bar = h('div', { class: 'controls' },
-        h('p', { class: 'verdict different' }, t(practice ? 'againPractice' : 'againSession')),
+        h('p', { class: 'verdict different' }, t({ session: 'againSession', practice: 'againPractice', archive: 'againArchive' }[mode])),
         nextBtn,
         h('div', { class: 'hint' }, kbdHint(t('nextHint'))),
       );
@@ -758,7 +836,8 @@
     }
 
     // In a Practice only "again" changes the schedule: SM-2 is not meant for answers given before
-    // the Card is due, so an early "good" must not grow the interval.
+    // the Card is due, so an early "good" must not grow the interval. In the Archive run every
+    // Grade counts: it returns the Card to the Deck.
     function counts(g) {
       return !practice || g === 'again';
     }
@@ -792,6 +871,17 @@
           h('div', { class: 'row' },
             h('a', { class: 'btn', href: '#/' }, t('toHome')),
             h('button', { class: 'primary', onclick: route }, t('anotherPractice')),
+          ),
+        );
+        return;
+      }
+      if (archiveRun) {
+        $app.replaceChildren(
+          h('h1', null, '¡Muy bien!'),
+          h('p', null, t('archiveOver', reviewed)),
+          h('div', { class: 'row' },
+            h('a', { class: 'btn', href: '#/' }, t('toHome')),
+            archivedCards().length ? h('button', { class: 'primary', onclick: route }, t('anotherArchive')) : null,
           ),
         );
         return;

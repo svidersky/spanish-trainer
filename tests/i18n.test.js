@@ -197,7 +197,7 @@ test('language: interval previews use English plurals', async t => {
   await app.waitFor(() => app.$('.card'));
   app.key(' ');
   const previews = app.$$('.grades button small').map(s => s.textContent.replace(/^\d · /, ''));
-  assert.deepEqual(previews, ['1 day', '1 day', '3 days', '7 days']);
+  assert.deepEqual(previews, ['1 day', '1 day', '3 days', 'to the Archive']);
 });
 
 test('language: the export reminder uses English plurals', t => {

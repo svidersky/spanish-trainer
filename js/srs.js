@@ -1,4 +1,5 @@
-// Spaced repetition: SM-2 ease updates with Anki-style intervals, using four Grades.
+// Spaced repetition: SM-2 ease updates with Anki-style intervals, using three Grades.
+// A Card can also be moved to the Archive, where its SM-2 state is frozen until it is graded again.
 // Works in the browser (window.SRS) and in Node (module.exports) for tests.
 (function (root) {
   'use strict';
@@ -7,14 +8,14 @@
   const LEARNED_DAYS = 21;
 
   // Learner's Grade -> SM-2 response quality q (0..5).
-  const QUALITY = { again: 1, hard: 3, good: 4, easy: 5 };
-  const GRADES = ['again', 'hard', 'good', 'easy'];
+  // "good" is labelled «Легко» (Easy) for the learner.
+  const QUALITY = { again: 1, hard: 3, good: 4 };
+  const GRADES = ['again', 'hard', 'good'];
 
   // Days until the next review after the first successful answer, by Grade.
-  const FIRST_INTERVAL = { hard: 1, good: 3, easy: 7 };
+  const FIRST_INTERVAL = { hard: 1, good: 3 };
   // Multipliers as in Anki's SM-2 deck options (https://docs.ankiweb.net/deck-options.html).
   const HARD_FACTOR = 1.2;
-  const EASY_BONUS = 1.3;
 
   function startOfDay(ts) {
     const d = new Date(ts);
@@ -42,21 +43,31 @@
       reps = 1;
       interval = FIRST_INTERVAL[grade];
     } else {
-      // Anki's SM-2 modifiers: hard = previous × 1.2, good = previous × ease, easy = good × 1.3.
-      // Each Grade gets a strictly longer interval than the one below it, and longer than before.
+      // Anki's SM-2 modifiers: hard = previous × 1.2, good = previous × ease.
+      // "good" gets a strictly longer interval than "hard", and both are longer than before.
       reps += 1;
       const prev = Math.max(1, interval);
       const hard = Math.max(prev + 1, Math.round(prev * HARD_FACTOR));
       const good = Math.max(hard + 1, Math.round(prev * ef));
-      const easy = Math.max(good + 1, Math.round(prev * ef * EASY_BONUS));
-      interval = { hard, good, easy }[grade];
+      interval = { hard, good }[grade];
     }
 
     ef = Math.max(1.3, ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)));
 
     // Due at the start of the day, so the Card is available from the morning of that day.
+    // The result has no Archive mark: a Grade always puts the Card (back) in the Deck.
     const due = startOfDay(now) + interval * DAY;
     return { ef: round2(ef), reps, interval, lapses, due, last: now };
+  }
+
+  // "Всё, запомнил": the SM-2 state is kept as it is. Archiving counts as the Card's latest
+  // answer (last), so Sync carries it to the Profile's other devices.
+  function archive(card, now) {
+    return { ...card, archived: true, last: now };
+  }
+
+  function isArchived(card) {
+    return !!(card && card.archived);
   }
 
   function isDue(card, now) {
@@ -71,7 +82,7 @@
     return Math.round(x * 100) / 100;
   }
 
-  const SRS = { DAY, LEARNED_DAYS, GRADES, FIRST_INTERVAL, newCard, review, isDue, isLearned, startOfDay };
+  const SRS = { DAY, LEARNED_DAYS, GRADES, FIRST_INTERVAL, newCard, review, archive, isArchived, isDue, isLearned, startOfDay };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = SRS;
   else root.SRS = SRS;
