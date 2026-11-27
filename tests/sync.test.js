@@ -208,7 +208,7 @@ test('sync: answering a Card pushes progress to the server automatically', async
   const b = device(t, c, { hash: '#/review', progress: lessonOneProgress(), syncConfig: { name: NAME, pin: PIN } });
   await b.waitFor(() => b.$('.card'));
   b.key(' ');
-  b.grade('Нормально');
+  b.grade('Легко');
   await b.waitFor(() => c.calls.some(x => x.url.endsWith('/save') && x.body.progress.cards['l01-01|recog'].reps === 1), 3000);
 });
 
@@ -218,7 +218,7 @@ test('sync: several Cards graded in one Session with sync on are all kept', asyn
   await app.waitFor(() => app.$('.card'));
   for (let i = 0; i < 3; i++) {
     app.key(' ');
-    app.grade('Нормально');
+    app.grade('Легко');
     await new Promise(r => setTimeout(r, 30)); // let a background sync land between answers
   }
   const local = app.progress().cards;
@@ -240,9 +240,9 @@ test('sync: answers from two devices are merged, not overwritten', async t => {
   await b.waitFor(() => b.text('.card .prompt') === 'Muy bien, gracias. ¿Y tú?');
 
   a.key(' ');
-  a.grade('Легко');
+  a.grade('Трудно');
   b.key(' ');
-  b.grade('Нормально');
+  b.grade('Легко');
 
   const merged = async () => {
     const s = await c.stored();
@@ -256,8 +256,8 @@ test('sync: answers from two devices are merged, not overwritten', async t => {
     if (!cards) await new Promise(r => setTimeout(r, 20));
   }
   assert.ok(cards, 'both answers reached the server');
-  assert.ok(cards['l01-01|recog'].ef > 2.5, 'A\'s "Легко" kept');
-  assert.equal(cards['l01-02|recog'].ef, 2.5, 'B\'s "Нормально" kept (ease unchanged)');
+  assert.ok(cards['l01-01|recog'].ef < 2.5, 'A\'s "Трудно" kept');
+  assert.equal(cards['l01-02|recog'].ef, 2.5, 'B\'s "Легко" kept (ease unchanged)');
 });
 
 test('sync: no connection shows a message and the app keeps working', async t => {

@@ -328,6 +328,40 @@ test('language: in English no Russian is left in a Session', async t => {
   noRussian(last, 'summary, all reviewed');
 });
 
+test('language: in English no Russian is left in the Archive choice, home counters and Archive run', async t => {
+  const progress = lessonOneProgress();
+  progress.cards['l01-02|recog'].archived = true;
+  const home = setup(t, { progress: en(progress) });
+  assert.ok(home.$('a[href="#/archive"]'));
+  noRussian(home, 'home with archived Cards');
+
+  const app = setup(t, { hash: '#/review', progress: en(lessonOneProgress()) });
+  await app.waitFor(() => app.$('.card'));
+  app.key(' ');
+  app.advance(400);
+  app.key('4');
+  assert.ok(app.$('.archive-choice'));
+  noRussian(app, 'archive choice');
+
+  const run = setup(t, { progress: en(progress) });
+  await run.go('#/archive');
+  await run.waitFor(() => run.$('.card'));
+  noRussian(run, 'Archive run card');
+  run.$('.card .dont-know').click();
+  noRussian(run, '"don\'t know" in the Archive run');
+  run.advance(400);
+  run.key('Enter');
+  run.key(' ');
+  run.advance(400);
+  run.key('3');
+  await run.waitFor(() => run.$('main h1') && !run.$('.card'));
+  noRussian(run, 'Archive run summary');
+
+  const empty = setup(t, { progress: en(lessonOneProgress()) });
+  await empty.go('#/archive');
+  noRussian(empty, 'nothing archived');
+});
+
 test('language: in English no Russian is left in a Practice', async t => {
   const learned = lessonOneProgress();
   for (const c of Object.values(learned.cards)) Object.assign(c, { interval: 30, due: START + 30 * DAY });

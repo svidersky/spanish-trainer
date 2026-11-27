@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const Merge = require('../js/merge.js');
+const SRS = require('../js/srs.js');
 
 const card = (last, interval = 1) => ({ ef: 2.5, reps: 1, interval, lapses: 0, due: last + interval, last });
 
@@ -32,6 +33,14 @@ test('a Card that was never answered loses to one that was', () => {
   const fresh = { ef: 2.5, reps: 0, interval: 0, lapses: 0, due: 50, last: null };
   const merged = Merge.merge(progress({ cards: { a: fresh } }), progress({ cards: { a: card(10, 3) } }));
   assert.equal(merged.cards.a.interval, 3);
+});
+
+test('moving a Card to the Archive reaches the other device and later answers bring it back', () => {
+  const archivedHere = SRS.archive(card(100, 3), 200);
+  const merged = Merge.merge(progress({ cards: { a: archivedHere } }), progress({ cards: { a: card(150, 8) } }));
+  assert.ok(SRS.isArchived(merged.cards.a), 'archiving after the remote answer wins');
+  const answeredThere = Merge.merge(progress({ cards: { a: archivedHere } }), progress({ cards: { a: card(300, 8) } }));
+  assert.ok(!SRS.isArchived(answeredThere.cards.a), 'a later answer elsewhere wins over archiving');
 });
 
 test('on an exact tie the local Card is kept', () => {
