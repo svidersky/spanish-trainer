@@ -1,6 +1,7 @@
 # Project conventions
 
-- **Language.** All project documentation is written in English: README, CONTEXT.md, ADRs, code comments, test names and assertion messages, commit messages, and PR descriptions. Only learner-facing content is in Russian (UI strings and lesson translations) or Spanish (lesson phrases).
+- **Language.** All project documentation is written in English: README, CONTEXT.md, ADRs, code comments, test names and assertion messages, commit messages, and PR descriptions. Only learner-facing content is in an Interface language (UI strings, lesson translations, notes and Transcriptions) or Spanish (lesson phrases).
+- **Every text change is translated into every Interface language.** Whenever a change adds, edits or removes learner-facing text (a UI string in `js/i18n.js`, a Lesson's translation, notes or Transcription), make the same change in every Interface language (currently Russian and English) in the same commit. Never leave one language behind, with a placeholder, or with text in the wrong language.
 - **Domain terms.** Use the glossary in [CONTEXT.md](CONTEXT.md) (Lesson, Phrase, Card, Recognition, Production, Grade, Session, Deck, Archive, Learned, Transcription, Speaker, Recording, Profile, Sync).
 - **No build step.** The app must keep working when `index.html` is opened from disk: plain `<script>` tags, no ES modules, no `fetch` of local files.
 - **Tests.** `npm test` (Node 22.22.2+ / 24.15.0+, jsdom 31). See README.
