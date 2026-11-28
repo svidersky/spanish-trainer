@@ -86,7 +86,7 @@ npm run lint
 
 - [tests/core.test.js](tests/core.test.js) covers the SM-2 scheduler and answer comparison.
 - [tests/lessons.test.js](tests/lessons.test.js) checks lesson data: unique ids, stress marks in transcriptions, paired ¿? and ¡! marks.
-- [tests/ui.test.js](tests/ui.test.js) runs the screens in jsdom: home and the settings page, lessons, marking a lesson completed, a session with both card directions, the timer, Practice over not-yet-Learned cards, export and import, and voice selection.
+- [tests/ui.test.js](tests/ui.test.js) runs the screens in jsdom: home and the settings page, lessons, marking a lesson completed, a session with both card directions, the timer, Practice over not-yet-Learned cards, the Archive («Всё, запомнил» and its random check), export and import, and voice selection.
 - [tests/monitoring.test.js](tests/monitoring.test.js) checks the Sentry setup: the environment tag, no personal data, and that index.html loads Sentry before the app.
 
 ### Mutation tests

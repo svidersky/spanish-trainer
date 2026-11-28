@@ -13,13 +13,19 @@ A short Assimil-style dialogue of 5–10 Phrases, with the Spanish text and its 
 The learner marks a Lesson as Completed themselves. At that moment all of the Lesson's Phrases are added to the Deck. Phrases from Lessons that are not Completed never enter the Deck.
 
 **Deck** («Колода»)
-All Cards of all Phrases from Completed Lessons. There is a single Deck shared by all Lessons.
+All Cards of all Phrases from Completed Lessons, except the archived ones. There is a single Deck shared by all Lessons.
+
+**Archive** («Запомненные»)
+The Cards the learner has marked «Всё, запомнил» ("Know it for good"). An archived Card leaves the Deck: it never comes up in a Session or a Practice and is not counted as due, Learned or not Learned; the home screen counts archived Cards on their own. Its SM-2 state is frozen as it was. When marking a Card, the learner chooses to archive only this Card or both Cards of the Phrase (the second option is offered while the other Card is still in the Deck), or cancels. Archiving counts as the Card's latest answer, so Sync carries it to the Profile's other devices.
+
+**Archive check** («Проверка запомненных»)
+A rare extra run over the Archive: a set number of archived Cards picked at random (the same number as a Practice takes). The Answer and the buttons are the same as in a Session. *again*, *hard* and *good* return the Card to the Deck, scheduled from its frozen state as an ordinary Grade; *again* also brings it back once more in the same check. «Всё, запомнил» keeps it in the Archive.
 
 **Session** («Сессия»)
-One time-boxed practice run over the Deck (15 minutes by default). The Cards that have been due the longest come first. When time runs out, the current Card is played through to its Grade and the Session ends. Cards not reached stay in the queue.
+One time-boxed practice run over the Deck (15 minutes by default). The Cards that have been due the longest come first. When time runs out, the current Card is played through to its Grade and the Session ends. Cards not reached stay in the queue. Archived Cards never come up in a Session; a Card archived during one leaves its queue at once.
 
 **Practice** («Тренировка»)
-An extra run over the Cards that are not Learned yet, at any time, whether they are due or not. The hardest Cards come first: the lowest SM-2 ease, then the most *again* answers, then the soonest due. A Practice takes a set number of Cards (20 by default, changed in the settings) rather than a set time. Only *again* changes a Card's schedule, exactly as in a Session, and brings the Card back at the end of the same Practice, beyond the set number; *hard*, *good* and *easy* leave the schedule as it was, because SM-2 is not meant for answers given before the Card is due.
+An extra run over the Deck's Cards that are not Learned yet (never archived ones), at any time, whether they are due or not. The hardest Cards come first: the lowest SM-2 ease, then the most *again* answers, then the soonest due. A Practice takes a set number of Cards (20 by default, changed in the settings) rather than a set time. Only *again* changes a Card's schedule, exactly as in a Session, and brings the Card back at the end of the same Practice, beyond the set number; *hard* and *good* leave the schedule as it was, because SM-2 is not meant for answers given before the Card is due. A Card archived during a Practice leaves its queue at once.
 
 **Profile** («Профиль»)
 A name and a 4-digit PIN under which one learner's progress is kept on the Sync server. There is no registration: the first successful sync with a new name creates the Profile with that PIN. After 5 wrong PINs in a row the name is locked for an hour.
@@ -55,7 +61,7 @@ The progress of one Card does not affect the other Card of the same Phrase.
 What the learner does before seeing the correct text. For Recognition, the learner answers silently or aloud. For Production, the learner types the Spanish text; the trainer highlights the differences from the correct text but does not judge it.
 
 **Grade** («Оценка»)
-The learner's self-assessment after the Answer: *again / hard / good / easy* («забыл / трудно / нормально / легко»). It is always given by the learner, never by the trainer. It decides when the Card is shown next, and it matters from the very first answer: *again* brings the Card back in the same Session, while *hard*, *good* and *easy* give a short, medium and long wait. After that, each Grade grows the wait at its own rate (SM-2 ease, with Anki's adjustments).
+The learner's self-assessment after the Answer: *again / hard / good* («забыл / трудно / легко»; in English "Again / Hard / Easy"). It is always given by the learner, never by the trainer. It decides when the Card is shown next, and it matters from the very first answer: *again* brings the Card back in the same Session, while *hard* and *good* give a short and a medium wait. After that, each Grade grows the wait at its own rate (SM-2 ease, with Anki's adjustments). Next to the Grades is «Всё, запомнил», which is not a Grade: it moves the Card to the Archive.
 
 **Learned** («Выучена»)
 The status of a Card whose interval until the next review is 21 days or more. A Learned Card is still reviewed. If a Grade of *again* drops the interval below 21 days, the status is removed. There is no separate "problem card" status: difficult Cards are simply shown more often by SM-2.

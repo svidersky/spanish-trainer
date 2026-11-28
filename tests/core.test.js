@@ -13,9 +13,14 @@ test('a new card is due immediately', () => {
   assert.ok(!SRS.isLearned(c));
 });
 
-test('first answer: each grade gives its own interval (1 / 3 / 7 days)', () => {
+test('there are three Grades: again, hard and good ("Легко")', () => {
+  assert.deepEqual(SRS.GRADES, ['again', 'hard', 'good']);
+  assert.throws(() => SRS.review(SRS.newCard(NOW), 'easy', NOW), /Unknown grade/);
+});
+
+test('first answer: each grade gives its own interval (1 / 1 / 3 days)', () => {
   const at = g => SRS.review(SRS.newCard(NOW), g, NOW).interval;
-  assert.deepEqual(['again', 'hard', 'good', 'easy'].map(at), [1, 1, 3, 7]);
+  assert.deepEqual(['again', 'hard', 'good'].map(at), [1, 1, 3]);
 });
 
 test('consecutive "good" grades: 3 → 8 → 20 → 50 days', () => {
@@ -28,22 +33,14 @@ test('consecutive "good" grades: 3 → 8 → 20 → 50 days', () => {
   assert.deepEqual(seen, [3, 8, 20, 50]);
 });
 
-test('consecutive "easy" grades make a card Learned on the second review', () => {
-  let c = SRS.review(SRS.newCard(NOW), 'easy', NOW);
-  assert.equal(c.interval, 7);
-  c = SRS.review(c, 'easy', c.due);
-  assert.equal(c.interval, 24); // 7 × 2.6 × 1.3
-  assert.ok(SRS.isLearned(c));
-});
-
-test('on a review card hard < good < easy, all longer than before', () => {
+test('on a review card hard < good, both longer than before', () => {
   const card = { ef: 2.5, reps: 3, interval: 10, lapses: 0, due: NOW, last: null };
-  const [hard, good, easy] = ['hard', 'good', 'easy'].map(g => SRS.review(card, g, NOW).interval);
-  assert.deepEqual([hard, good, easy], [12, 25, 33]);
+  const [hard, good] = ['hard', 'good'].map(g => SRS.review(card, g, NOW).interval);
+  assert.deepEqual([hard, good], [12, 25]);
   for (const ease of [1.3, 1.5, 2.5, 3]) {
     const c = { ...card, ef: ease, interval: 1 };
-    const [h, g, e] = ['hard', 'good', 'easy'].map(x => SRS.review(c, x, NOW).interval);
-    assert.ok(1 < h && h < g && g < e, `ease ${ease}: ${h} ${g} ${e}`);
+    const [h, g] = ['hard', 'good'].map(x => SRS.review(c, x, NOW).interval);
+    assert.ok(1 < h && h < g, `ease ${ease}: ${h} ${g}`);
   }
 });
 
@@ -73,10 +70,10 @@ test('"again" resets repetitions and removes the Learned status', () => {
   assert.ok(c.ef < 2.5);
 });
 
-test('"hard" lowers ease, "easy" raises it, ease never drops below 1.3', () => {
+test('"hard" lowers ease, "good" keeps it, ease never drops below 1.3', () => {
   const base = SRS.newCard(NOW);
   assert.ok(SRS.review(base, 'hard', NOW).ef < 2.5);
-  assert.ok(SRS.review(base, 'easy', NOW).ef > 2.5);
+  assert.equal(SRS.review(base, 'good', NOW).ef, 2.5);
   let c = base;
   for (let i = 0; i < 20; i++) c = SRS.review(c, 'again', NOW);
   assert.equal(c.ef, 1.3);
@@ -95,6 +92,30 @@ test('the interval always grows after a successful answer', () => {
 
 test('an unknown grade throws', () => {
   assert.throws(() => SRS.review(SRS.newCard(NOW), 'meh', NOW));
+});
+
+// ---------- Archive («Запомненные») ----------
+
+test('archiving freezes the SM-2 state, marks the Card and counts as its latest answer', () => {
+  const card = { ef: 2.2, reps: 3, interval: 12, lapses: 2, due: day(5), last: NOW - SRS.DAY };
+  const later = NOW + 1000;
+  const archived = SRS.archive(card, later);
+  assert.deepEqual(archived, { ...card, archived: true, last: later });
+  assert.ok(SRS.isArchived(archived));
+  assert.ok(!SRS.isArchived(card));
+  assert.deepEqual(card, { ef: 2.2, reps: 3, interval: 12, lapses: 2, due: day(5), last: NOW - SRS.DAY }, 'the original is not changed');
+});
+
+test('a Grade given to an archived Card returns it to the Deck, scheduled from its frozen state', () => {
+  const archived = SRS.archive({ ef: 2.5, reps: 3, interval: 10, lapses: 0, due: day(-30), last: NOW - 40 * SRS.DAY }, NOW - 30 * SRS.DAY);
+  const good = SRS.review(archived, 'good', NOW);
+  assert.ok(!SRS.isArchived(good));
+  assert.equal(good.interval, 25, 'the frozen 10 days × ease 2.5');
+  assert.equal(good.due, day(25), 'counted from today');
+  const again = SRS.review(archived, 'again', NOW);
+  assert.ok(!SRS.isArchived(again));
+  assert.equal(again.interval, 1);
+  assert.equal(again.lapses, 1);
 });
 
 test('answer comparison: exact / almost / different / empty', () => {

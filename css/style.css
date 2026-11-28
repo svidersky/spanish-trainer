@@ -179,7 +179,8 @@ button:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px sol
 .grades button { flex-direction: column; gap: 0; padding: 8px 4px; }
 .grades small { color: var(--muted); font-size: 12px; }
 .grades .again { border-color: var(--bad); }
-.grades .easy { border-color: var(--ok); }
+.grades .archive { border-color: var(--ok); }
+.archive-choice { margin-top: 18px; }
 .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .hint:empty { display: none; }
 .dont-know { color: var(--muted); }

@@ -197,7 +197,7 @@ test('language: interval previews use English plurals', async t => {
   await app.waitFor(() => app.$('.card'));
   app.key(' ');
   const previews = app.$$('.grades button small').map(s => s.textContent.replace(/^\d · /, ''));
-  assert.deepEqual(previews, ['1 day', '1 day', '3 days', '7 days']);
+  assert.deepEqual(previews, ['1 day', '1 day', '3 days', 'to the Archive']);
 });
 
 test('language: the export reminder uses English plurals', t => {
@@ -326,6 +326,88 @@ test('language: in English no Russian is left in a Session', async t => {
   last.advance(400);
   last.key('3');
   noRussian(last, 'summary, all reviewed');
+});
+
+test('language: in English no Russian is left in the Archive choice, home counters and Archive run', async t => {
+  const progress = lessonOneProgress();
+  progress.cards['l01-02|recog'].archived = true;
+  const home = setup(t, { progress: en(progress) });
+  assert.ok(home.$('a[href="#/archive"]'));
+  noRussian(home, 'home with archived Cards');
+
+  const app = setup(t, { hash: '#/review', progress: en(lessonOneProgress()) });
+  await app.waitFor(() => app.$('.card'));
+  app.key(' ');
+  app.advance(400);
+  app.key('4');
+  assert.ok(app.$('.archive-choice'));
+  noRussian(app, 'archive choice');
+
+  const run = setup(t, { progress: en(progress) });
+  await run.go('#/archive');
+  await run.waitFor(() => run.$('.card'));
+  noRussian(run, 'Archive run card');
+  run.$('.card .dont-know').click();
+  noRussian(run, '"don\'t know" in the Archive run');
+  run.advance(400);
+  run.key('Enter');
+  run.key(' ');
+  run.advance(400);
+  run.key('3');
+  await run.waitFor(() => run.$('main h1') && !run.$('.card'));
+  noRussian(run, 'Archive run summary');
+
+  const empty = setup(t, { progress: en(lessonOneProgress()) });
+  await empty.go('#/archive');
+  noRussian(empty, 'nothing archived');
+});
+
+test('language: the Archive texts in English: home, Grade buttons, the choice and the Archive run', async t => {
+  const progress = lessonOneProgress();
+  progress.cards['l01-02|recog'].archived = true;
+  const home = setup(t, { progress: en(progress) });
+  assert.deepEqual(home.$$('.stat span').map(s => s.textContent), ['due', 'learned', 'cards in the deck', 'archived']);
+  assert.equal(home.text('a[href="#/archive"]'), 'Check archived cards · 1');
+
+  const app = setup(t, { hash: '#/review', progress: en(lessonOneProgress()) });
+  await app.waitFor(() => app.$('.card'));
+  app.key(' ');
+  assert.deepEqual(app.$$('.grades button').map(b => b.firstChild.textContent.trim()), ['Again', 'Hard', 'Easy', 'Know it for good']);
+  app.advance(400);
+  app.key('4');
+  assert.equal(app.text('.archive-choice p'), 'Move to the Archive:');
+  assert.deepEqual(app.$$('.archive-choice button').map(b => b.textContent), ['Just this card', 'Both cards of the phrase', 'Cancel']);
+  assert.equal(app.text('.archive-choice .hint'), '1 — this one, 2 — both, Esc — cancel.');
+
+  const otherArchived = lessonOneProgress();
+  otherArchived.cards['l01-01|produce'].archived = true;
+  const single = setup(t, { hash: '#/review', progress: en(otherArchived) });
+  await single.waitFor(() => single.$('.card'));
+  single.key(' ');
+  single.advance(400);
+  single.key('4');
+  assert.equal(single.text('.archive-choice .hint'), '1 or Enter — move it, Esc — cancel.');
+
+  const run = setup(t, { progress: en(progress) });
+  await run.go('#/archive');
+  await run.waitFor(() => run.$('.card'));
+  assert.equal(run.document.title, 'Archive');
+  run.$('.card .dont-know').click();
+  assert.equal(run.text('.verdict.different'), 'Grade: “Again”. The card is back in the deck and will come up again in this check.');
+  run.advance(400);
+  run.key('Enter');
+  run.key(' ');
+  run.advance(400);
+  run.key('4');
+  run.advance(400);
+  run.key('1');
+  assert.equal(run.text('main p'), 'Check over. Cards done: 2.');
+  assert.ok(run.byText('main button', 'Another check'));
+
+  const empty = setup(t, { progress: en(lessonOneProgress()) });
+  await empty.go('#/archive');
+  assert.equal(empty.text('main h1'), 'Archive');
+  assert.equal(empty.text('main p'), 'No cards in the Archive.');
 });
 
 test('language: in English no Russian is left in a Practice', async t => {
