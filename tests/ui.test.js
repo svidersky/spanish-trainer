@@ -555,6 +555,10 @@ test('session: grades can be given with keys 1–3; "Легко" (3) is the medi
   app.advance(400);
   app.key('2');
   assert.equal(app.progress().cards['l01-02|recog'].interval, 1, '"Трудно" (2)');
+  app.key(' ');
+  app.advance(400);
+  app.key('1');
+  assert.equal(app.progress().cards['l01-03|recog'].lapses, 1, '"Забыл" (1)');
 });
 
 test('session: "again" sends the card to the end of the same session', async t => {
@@ -897,6 +901,103 @@ test('archive: "this Card" has the focus in the choice, so Enter picks it', asyn
   assert.ok(app.progress().cards['l01-01|recog'].archived);
 });
 
+test('archive: the fourth button and the choice say what happens and which keys do it', async t => {
+  const app = await reviewing(t);
+  app.key(' ');
+  assert.deepEqual(app.$$('.grades button small').map(s => s.textContent),
+    ['1 · 1 день', '2 · 1 день', '3 · 3 дня', '4 · в запомненные']);
+  pressArchive(app);
+  assert.equal(app.text('.archive-choice p'), 'Убрать в «Запомненные»:');
+  assert.deepEqual(app.$$('.archive-choice button').map(b => b.textContent),
+    ['Только эту карточку', 'Обе карточки фразы', 'Отмена']);
+  assert.equal(app.text('.archive-choice .hint'), '1 — эту, 2 — обе, Esc — отмена.');
+
+  const single = await reviewing(t, { progress: withArchived(lessonOneProgress(), ['l01-01|produce']) });
+  single.key(' ');
+  pressArchive(single);
+  assert.equal(single.text('.archive-choice .hint'), '1 или Enter — убрать, Esc — отмена.');
+});
+
+test('archive: 4 and the choice keys, Esc included, wait out a full 300 ms bounce guard', async t => {
+  const app = await reviewing(t);
+  app.key(' ');
+  app.key('4');
+  assert.equal(app.$('.archive-choice'), null, '4 right after revealing is ignored, like a Grade');
+  app.advance(300);
+  app.key('4');
+  assert.equal(app.$('.archive-choice'), null, 'still ignored at exactly 300 ms');
+  app.advance(1);
+  app.key('4');
+  assert.ok(app.$('.archive-choice'));
+
+  app.key('Escape');
+  assert.ok(app.$('.archive-choice'), 'Esc right after the choice opens is ignored');
+  app.advance(300);
+  app.key('1');
+  assert.ok(!app.progress().cards['l01-01|recog'].archived, 'still ignored at exactly 300 ms');
+  app.advance(1);
+  app.key('1');
+  assert.ok(app.progress().cards['l01-01|recog'].archived);
+});
+
+test('archive: other keys do nothing, and Enter picks "this Card" only while it has the focus', async t => {
+  const app = await reviewing(t);
+  app.key(' ');
+  app.advance(400);
+  app.key('5');
+  assert.equal(app.$('.archive-choice'), null, 'only 4 opens the choice');
+  assert.ok(app.$('.card .grades'));
+
+  app.key('4');
+  app.advance(400);
+  await app.waitFor(() => app.document.activeElement && app.document.activeElement.closest('.archive-choice'));
+  app.key('x');
+  assert.ok(app.$('.archive-choice'), 'an unhandled key neither picks nor cancels');
+  choice(app, 'Отмена').focus();
+  app.key('Enter');
+  assert.ok(app.$('.archive-choice'), 'Enter on another button does not pick "this Card"');
+  assert.ok(!app.progress().cards['l01-01|recog'].archived);
+});
+
+test('archive: the keys the Grade buttons and the choice act on are kept from the browser', async t => {
+  const app = await reviewing(t);
+  app.key(' ');
+  app.advance(400);
+  assert.ok(app.key('4').defaultPrevented, '4');
+  app.advance(400);
+  assert.ok(app.key('Escape').defaultPrevented, 'Esc');
+  app.advance(400);
+  app.key('4');
+  app.advance(400);
+  assert.ok(app.key('2').defaultPrevented, '2');
+
+  app.key(' ');
+  app.advance(400);
+  app.key('4');
+  app.advance(400);
+  assert.ok(app.key('1').defaultPrevented, '1');
+
+  app.key(' ');
+  app.advance(400);
+  app.key('4');
+  app.advance(400);
+  await app.waitFor(() => app.document.activeElement && app.document.activeElement.closest('.archive-choice'));
+  assert.ok(app.key('Enter').defaultPrevented, 'Enter on "this Card"');
+  assert.ok(app.progress().cards['l01-03|recog'].archived);
+});
+
+test('archive: "Обе карточки фразы" also drops the other Card when it is next in the queue', async t => {
+  const progress = lessonOneProgress();
+  for (const [k, c] of Object.entries(progress.cards)) if (!k.startsWith('l01-01|')) c.due = START + 2 * DAY;
+  const app = await reviewing(t, { progress });
+  assert.match(app.text('.session-bar'), /осталось 2/);
+  app.key(' ');
+  pressArchive(app);
+  choice(app, 'Обе карточки фразы').click();
+  assert.equal(app.$('.card'), null, 'nothing is left to show');
+  assert.match(app.text('main'), /Повторено карточек: 1/);
+});
+
 test('archive: works in a Practice too and is not treated as an early answer', async t => {
   const app = await practicing(t, notDueProgress());
   const key = shownKey(app);
@@ -950,6 +1051,19 @@ test('home: a Deck with every Card archived is not called empty and still needs 
   assert.doesNotMatch(app.text('.panel'), /Колода пока пуста/);
   assert.match(app.text('a[href="#/archive"]'), /· 16$/);
   assert.ok(app.$('.gear.attention'), 'the progress still needs a file copy');
+});
+
+test('home: with as many Cards archived as left in the Deck, the Deck is not empty and still needs a backup', t => {
+  const progress = lessonOneProgress();
+  withArchived(progress, Object.keys(progress.cards).filter(k => k.endsWith('|produce')));
+  const app = setup(t, { progress });
+  const stat = label => app.byText('.stat', label).querySelector('b').textContent;
+  assert.equal(stat('карточек в колоде'), '8');
+  assert.equal(stat('запомнено'), '8');
+  assert.doesNotMatch(app.text('.panel'), /Колода пока пуста/);
+  assert.match(app.text('a[href="#/review"]'), /Начать сессию/);
+  assert.match(app.text('main .warn'), /ни разу не сохранялся/);
+  assert.ok(app.$('.gear.attention'));
 });
 
 test('home: a button checks the Archive, sized like a Practice; none while the Archive is empty', t => {
@@ -1058,6 +1172,47 @@ test('archive run: "Всё, запомнил" keeps the Card in the Archive with
   choice(app, 'Только эту карточку').click();
   assert.deepEqual(app.progress().cards['l01-03|recog'], { ...before, last: app.now() });
   assert.match(app.text('main'), /Проверка окончена/);
+});
+
+test('archive run: the summary leads home and offers another check only while the Archive is not empty', async t => {
+  const kept = await checkingArchive(t, withArchived(notDueProgress(), ['l01-03|recog']));
+  kept.answer('x');
+  pressArchive(kept);
+  choice(kept, 'Только эту карточку').click();
+  assert.equal(kept.text('main h1'), '¡Muy bien!');
+  assert.equal(kept.text('main p'), 'Проверка окончена. Пройдено карточек: 1.');
+  assert.equal(kept.text('main a[href="#/"]'), '← На главную');
+  kept.byText('main button', 'Ещё одна проверка').click();
+  await kept.waitFor(() => kept.$('.card'));
+  assert.equal(shownKey(kept), 'l01-03|recog', 'a new check starts');
+
+  const emptied = await checkingArchive(t, withArchived(notDueProgress(), ['l01-03|recog']));
+  emptied.answer('x');
+  emptied.grade('Легко');
+  assert.equal(emptied.text('main h1'), '¡Muy bien!');
+  assert.ok(emptied.$('main a[href="#/"]'));
+  assert.equal(emptied.$('main button'), null, 'no other check: the Archive is empty now');
+});
+
+test('session, Practice and Archive run: the page title names the screen', async t => {
+  assert.equal((await reviewing(t)).document.title, 'Повторение');
+  assert.equal((await practicing(t, notDueProgress())).document.title, 'Тренировка');
+  assert.equal((await checkingArchive(t, withArchived(notDueProgress(), ['l01-03|recog']))).document.title, 'Запомненные');
+});
+
+test('"Не знаю" says where the Card goes, in a Session, a Practice and the Archive run', async t => {
+  const session = await reviewing(t);
+  session.byText('.card button', 'Не знаю').click();
+  assert.equal(session.text('.verdict.different'), 'Оценка: «Забыл» — карточка вернётся в этой сессии.');
+
+  const practice = await practicing(t, notDueProgress());
+  practice.byText('.card button', 'Не знаю').click();
+  assert.equal(practice.text('.verdict.different'), 'Оценка: «Забыл» — карточка вернётся в этой тренировке.');
+
+  const run = await checkingArchive(t, withArchived(notDueProgress(), ['l01-03|recog']));
+  run.byText('.card button', 'Не знаю').click();
+  assert.equal(run.text('.verdict.different'),
+    'Оценка: «Забыл» — карточка вернулась в колоду и ещё раз появится в этой проверке.');
 });
 
 // ---------- progress: export and import ----------

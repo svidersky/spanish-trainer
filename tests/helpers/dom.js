@@ -141,8 +141,11 @@ function boot({
     setConfirm(v) { confirmAnswer = v; },
     progress: () => JSON.parse(w.localStorage.getItem(KEY) || 'null'),
     syncConfig: () => JSON.parse(w.localStorage.getItem(SYNC_KEY) || 'null'),
+    // Press a key; returns the event, so a test can see whether the app kept it from the browser.
     key(k) {
-      w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      const e = new w.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+      w.document.dispatchEvent(e);
+      return e;
     },
     async go(h) {
       w.location.hash = h;
